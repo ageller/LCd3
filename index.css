@@ -12,7 +12,7 @@ body {
 
 .dot {
 	stroke: #000000;
-    fill: #DC143C;
+/*    fill: #DC143C;*/
 }
 .label{
 	fill:black;
