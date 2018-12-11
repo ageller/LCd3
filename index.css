@@ -14,6 +14,18 @@ body {
 	stroke: #000000;
 /*    fill: #DC143C;*/
 }
+
+.error-line {
+  stroke-width: 2px;
+  stroke-type: solid;
+  opacity:0.5;
+}
+.error-cap {
+  stroke-width: 2px;
+  stroke-type: solid;
+  opacity:0.5;
+}
+
 .label{
 	fill:black;
 	font-size:18pt;
