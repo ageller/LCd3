@@ -230,7 +230,10 @@ function startPlotting(){
 
 	//dropdown
 	var selectP = d3.select("body").append('select')
-		.attr('style','width:160px')
+		.style('width','160px')
+		.style('position','absolute')
+		.style('top', '360px')
+		.style('left', '500px')
 		.attr('class','selector')
 		.on('change',updatePhasePlot)
 
