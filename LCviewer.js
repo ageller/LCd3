@@ -176,7 +176,7 @@ function startPlotting(data){
 	var period = 0.46614771; //will be substituted with real data later
 	var phaseData = [];
 	data.forEach(function(d){
-		phaseData.push({"x":parseFloat(d.hjd) % period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
+		phaseData.push({"x":(parseFloat(d.hjd) % period)/period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
 	})
 	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=-(width + margin.left + margin.right), top=(height + margin.bottom + margin.top));
 
