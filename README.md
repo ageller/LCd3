@@ -1,2 +1,2 @@
 # LCd3
-a d3 light curve viewer 
+A d3 light curve viewer.  A live version is available [here](https://ageller.github.io/LCd3/).
