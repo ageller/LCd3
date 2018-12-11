@@ -92,6 +92,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 	yScale.domain(yExtent).nice();
 
 	var plot = d3.select("body").append("svg")
+		.style('position', 'absolute')
 		.attr("width", (width + margin.left + margin.right))
 		.attr("height", (height + margin.top + margin.bottom))
 		.attr("transform", "translate(" + left + "," + top + ")")
@@ -226,7 +227,7 @@ function startPlotting(){
 	inputData.forEach(function(d){
 		phaseData.push({"x":(parseFloat(d.hjd) % period)/period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
 	})
-	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=-(width + margin.left + margin.right), top=(height + margin.bottom + margin.top));
+	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=0, top=(height + margin.bottom + margin.top));
 
 	//dropdown
 	var selectP = d3.select("body").append('select')
@@ -238,7 +239,7 @@ function startPlotting(){
 		.on('change',updatePhasePlot)
 
 	var options = selectP.selectAll('option')
-	.data(inputPeriods).enter()
-	.append('option')
-	.text(function (d) { return d.period; });
+		.data(inputPeriods).enter()
+		.append('option')
+		.text(function (d) { return d.period; });
 }
