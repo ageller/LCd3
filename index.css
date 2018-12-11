@@ -12,18 +12,19 @@ body {
 
 .dot {
 	stroke: #000000;
+	opacity:0.7;
 /*    fill: #DC143C;*/
 }
 
 .error-line {
-  stroke-width: 2px;
-  stroke-type: solid;
-  opacity:0.5;
+	stroke-width: 2px;
+	stroke-type: solid;
+	opacity:0.5;
 }
 .error-cap {
-  stroke-width: 2px;
-  stroke-type: solid;
-  opacity:0.5;
+	stroke-width: 2px;
+	stroke-type: solid;
+	opacity:0.5;
 }
 
 .label{
