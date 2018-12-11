@@ -125,7 +125,11 @@ function startPlotting(data){
 	})
 	rawPlot = createPlot(rawData, width, height, margin, "Days", "Brightness");
 
-	var phaseData = rawData;
+	var period = 0.46614771; //will be substituted with real data later
+	var phaseData = [];
+	data.forEach(function(d){
+		phaseData.push({"x": (d.hjd % period), "y":d.mag})
+	})
 	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=-(width + margin.left + margin.right), top=(height + margin.bottom + margin.top), fillColor="00ff00");
 
 
