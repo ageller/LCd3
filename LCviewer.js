@@ -6,7 +6,10 @@ var	idleTimeout,
 
 d3.csv("data/27882110006813.csv")
 	.then(function(data) {
-		startPlotting(data);
+		d3.csv("data/27882110006813_periods.csv")
+			.then(function(periods) {
+				startPlotting(data, periods);
+		});
 	});
 
 //////////////
@@ -163,7 +166,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 
 
 //create the plots
-function startPlotting(data){
+function startPlotting(data, periods){
 	var rawData = [],
 		margin = {top: 0, right: 0, bottom: 60, left: 60},
 		width = 500,
@@ -173,7 +176,7 @@ function startPlotting(data){
 	})
 	rawPlot = createPlot(rawData, width, height, margin, "Days", "Brightness");
 
-	var period = 0.46614771; //will be substituted with real data later
+	var period = parseFloat(periods[0].period); 
 	var phaseData = [];
 	data.forEach(function(d){
 		phaseData.push({"x":(parseFloat(d.hjd) % period)/period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
