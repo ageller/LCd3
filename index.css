@@ -1,0 +1,23 @@
+body {
+	font: 10px sans-serif;
+	padding:20px;
+}
+
+.axis path,
+.axis line {
+	fill: none;
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+
+.dot {
+	stroke: #000000;
+    fill: #DC143C;
+}
+.label{
+	fill:black;
+	font-size:18pt;
+}
+.hidden {
+	display:none;
+}
