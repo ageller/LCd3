@@ -38,3 +38,11 @@ body {
 .hidden {
 	display:none;
 }
+
+.button{
+	margin:2px;
+	cursor:pointer;
+}
+.clicked{
+	background-color: #67aa84;
+}

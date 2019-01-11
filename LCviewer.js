@@ -207,9 +207,11 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			"yScale":yScale};
 }
 
-function updatePhasePlot(multiple){
-	console.log("updating phase")
+function updatePhasePlot(multiple, buttonID=null){
 	var period = inputData.period*multiple;
+
+	d3.selectAll('.button').classed('clicked', false);
+	d3.select(buttonID).classed('clicked', true);
 
 	phaseData = [];
 	inputData.obsmjd.forEach(function(d, i){
@@ -256,30 +258,34 @@ function startPlotting(){
 	})
 	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
-	//buttons (these should remain a different color after clicked)
+	//buttons
 	bwidth = 160;
 	var buttonsDiv = d3.select("body").append("div")
 		.attr('id','buttonsDiv')
+		.attr('class', 'button')
 		.style('width',bwidth+'px')
 		.style('position','absolute')
 		.style('top', (heightDays + marginDays.top + marginDays.bottom + 50) + 'px')
 		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px');
 	var wholePeriod = d3.select("#buttonsDiv").append('input')
 		.attr('id', 'wholePeriodButton')
+		.attr('class', 'button clicked')
 		.style('width',bwidth+'px')
 		.attr('type','button')
 		.attr('value','whole period')
-		.attr('onclick','updatePhasePlot(1.)');
+		.attr('onclick','updatePhasePlot(1., buttonID="#wholePeriodButton")');
 	var halfPeriod = d3.select("#buttonsDiv").append('input')
 		.attr('id', 'halfPeriodButton')
+		.attr('class', 'button')
 		.style('width',bwidth+'px')
 		.attr('type','button')
 		.attr('value','half period')
-		.attr('onclick','updatePhasePlot(0.5)');
+		.attr('onclick','updatePhasePlot(0.5, buttonCID="#halfPeriodButton")');
 	var twicePeriod = d3.select("#buttonsDiv").append('input')
 		.attr('id', 'twicePeriodButton')
+		.attr('class', 'button')
 		.style('width',bwidth+'px')
 		.attr('type','button')
 		.attr('value','twice period')
-		.attr('onclick','updatePhasePlot(2.0)');
+		.attr('onclick','updatePhasePlot(2.0, buttonID="#twicePeriodButton")');
 }
