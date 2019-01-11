@@ -14,14 +14,10 @@ var rawData = [],
 	inputData,
 	inputPeriods;
 
-d3.csv("data/27882110006813.csv")
+d3.json("data/27882110006813.json")
 	.then(function(data) {
-		d3.csv("data/27882110006813_periods.csv")
-			.then(function(periods) {
-				inputData = data;
-				inputPeriods = periods
-				startPlotting();
-		});
+		inputData = data;
+		startPlotting();
 	});
 
 //////////////
@@ -182,15 +178,13 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 			"yScale":yScale};
 }
 
-function updatePhasePlot(){
-	var option = d3.select(this)
-		.selectAll("option")
-		.filter(function (d, i) {return this.selected;});
-	period = option.property('value');
+function updatePhasePlot(multiple){
+	console.log("updating phase")
+	var period = inputData.period*multiple;
 
-
-	inputData.forEach(function(d, i){
-		phaseData[i] = {"x":(parseFloat(d.hjd) % period)/period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)};
+	phaseData = [];
+	inputData.obsmjd.forEach(function(d, i){
+		phaseData.push({"x":(parseFloat(inputData.obsmjd[i]) % period)/period, "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
 	})
 
 	//addData(phaseData, phasePlot.plot, phasePlot.xScale, phasePlot.yScale)
@@ -217,29 +211,43 @@ function startPlotting(){
 	var	margin = {top: 0, right: 0, bottom: 60, left: 60},
 		width = 500,
 		height = 300;
-	inputData.forEach(function(d){
-		rawData.push({"x":parseFloat(d.hjd), "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
+	//reformat the data -- easier for plotting
+	inputData.obsmjd.forEach(function(d, i){
+		rawData.push({"x":parseFloat(inputData.obsmjd[i]), "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
 	})
 	rawPlot = createPlot(rawData, width, height, margin, "Days", "Brightness");
 
 	//phase plot
-	var period = parseFloat(inputPeriods[0].period); 
-	inputData.forEach(function(d){
-		phaseData.push({"x":(parseFloat(d.hjd) % period)/period, "y":parseFloat(d.mag), "ye":parseFloat(d.emag)})
+	var period = parseFloat(inputData.period); 
+	inputData.obsmjd.forEach(function(d, i){
+		phaseData.push({"x":(parseFloat(inputData.obsmjd[i]) % period)/period, "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
 	})
 	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=0, top=(height + margin.bottom + margin.top));
 
-	//dropdown
-	var selectP = d3.select("body").append('select')
-		.style('width','160px')
+	//buttons
+	bwidth = 160;
+	var buttonsDiv = d3.select("body").append("div")
+		.attr('id','buttonsDiv')
+		.style('width',bwidth+'px')
 		.style('position','absolute')
 		.style('top', '360px')
-		.style('left', '500px')
-		.attr('class','selector')
-		.on('change',updatePhasePlot)
-
-	var options = selectP.selectAll('option')
-		.data(inputPeriods).enter()
-		.append('option')
-		.text(function (d) { return d.period; });
+		.style('left', '500px');
+	var wholePeriod = d3.select("#buttonsDiv").append('input')
+		.attr('id', 'wholePeriodButton')
+		.style('width',bwidth+'px')
+		.attr('type','button')
+		.attr('value','whole period')
+		.attr('onclick','updatePhasePlot(1.)');
+	var halfPeriod = d3.select("#buttonsDiv").append('input')
+		.attr('id', 'halfPeriodButton')
+		.style('width',bwidth+'px')
+		.attr('type','button')
+		.attr('value','half period')
+		.attr('onclick','updatePhasePlot(0.5)');
+	var twicePeriod = d3.select("#buttonsDiv").append('input')
+		.attr('id', 'twicePeriodButton')
+		.style('width',bwidth+'px')
+		.attr('type','button')
+		.attr('value','twice period')
+		.attr('onclick','updatePhasePlot(2.0)');
 }
