@@ -239,8 +239,8 @@ function updatePhasePlot(multiple, buttonID=null){
 //create the plots
 function startPlotting(){
 	//raw data
-	var	marginDays = {top: 50, right: 5, bottom: 5, left: 60},
-		marginPhase = {top: 5, right: 5, bottom: 60, left: 60},
+	var	marginDays = {top: 50, right: 10, bottom: 5, left: 60},
+		marginPhase = {top: 5, right: 10, bottom: 60, left: 60},
 		heightDays = 100,
 		heightPhase = 300,
 		width = 500;
@@ -279,13 +279,20 @@ function startPlotting(){
 		.attr('class', 'button')
 		.style('width',bwidth+'px')
 		.attr('type','button')
-		.attr('value','half period')
+		.attr('value','half the period')
 		.attr('onclick','updatePhasePlot(0.5, buttonCID="#halfPeriodButton")');
 	var twicePeriod = d3.select("#buttonsDiv").append('input')
 		.attr('id', 'twicePeriodButton')
 		.attr('class', 'button')
 		.style('width',bwidth+'px')
 		.attr('type','button')
-		.attr('value','twice period')
+		.attr('value','double the period')
 		.attr('onclick','updatePhasePlot(2.0, buttonID="#twicePeriodButton")');
+	var triplePeriod = d3.select("#buttonsDiv").append('input')
+		.attr('id', 'triplePeriodButton')
+		.attr('class', 'button')
+		.style('width',bwidth+'px')
+		.attr('type','button')
+		.attr('value','triple the period')
+		.attr('onclick','updatePhasePlot(3.0, buttonID="#triplePeriodButton")');
 }
