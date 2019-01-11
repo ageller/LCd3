@@ -2,7 +2,7 @@
 //some initial definitions
 var	idleTimeout,
 	idleDelay = 350,
-	errLen = 4, 
+	errLen = 4, //error cap
 	tDuration = 750;
 
 //will store plots
