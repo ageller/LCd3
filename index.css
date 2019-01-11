@@ -10,6 +10,10 @@ body {
 	shape-rendering: crispEdges;
 }
 
+.axis-blank text{
+	display: none;
+}
+
 .dot {
 	stroke: #000000;
 	opacity:0.7;

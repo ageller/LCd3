@@ -70,7 +70,7 @@ function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#D
 //////////////
 // setup the plot
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, circleColor="#DC143C", errColor="#DC143C"){
+function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, circleColor="#DC143C", errColor="#DC143C"){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
@@ -78,8 +78,10 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 		yScale = d3.scaleLinear().range(y0);
 
 
-	var xAxis = d3.axisBottom(xScale),
-		yAxis = d3.axisLeft(yScale);
+	var xAxisBottom = d3.axisBottom(xScale),
+		xAxisTop = d3.axisTop(xScale),
+		yAxisLeft = d3.axisLeft(yScale),
+		yAxisRight = d3.axisLeft(yScale);
 
 	var xExtent = d3.extent(data, function(d) { return +d.x; }),
 		yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
@@ -88,36 +90,61 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 	yScale.domain(yExtent).nice();
 
 	var plot = d3.select("body").append("svg")
+		.attr('class',className)
 		.style('position', 'absolute')
 		.attr("width", (width + margin.left + margin.right))
 		.attr("height", (height + margin.top + margin.bottom))
 		.attr("transform", "translate(" + left + "," + top + ")")
 
 	//axes
-	var gX = plot.append("g")
-		.attr("class", "axis axis--x")
+	var gXbottom = plot.append("g")
+		.attr("class", "axis axis-x-bottom")
 		.attr("transform", "translate(0," + (height + margin.top) + ")")
-		.call(xAxis)
-	var gY = plot.append("g")
+		.call(xAxisBottom)
+	var gXtop = plot.append("g")
+		.attr("class", "axis axis-x-top")
+		.attr("transform", "translate(0," + (margin.top) + ")")
+		.call(xAxisTop)
+	var gYleft = plot.append("g")
 		.attr("transform", "translate(" + margin.left + ",0)")
-		.attr("class", "axis axis--y")
-		.call(yAxis)
+		.attr("class", "axis axis-y-left")
+		.call(yAxisLeft)
+	var gYright = plot.append("g")
+		.attr("transform", "translate(" + (width + margin.left) + ",0)")
+		.attr("class", "axis axis-y-right axis-blank")
+		.call(yAxisRight)
+
+	//cleanup ticks
+	if (topXlabel){
+		gXbottom.classed('axis-blank', true);
+	} else{
+		gXtop.classed('axis-blank', true);
+	}
+	if (height < 200){
+		gYleft.call(yAxisLeft.ticks(5));
+		gYright.call(yAxisLeft.ticks(5));
+	}
 
 	//axes labels
+	var yoffset = height + margin.bottom - 20,
+		xoffset = -height/2.
+	if (topXlabel){
+		yoffset = 20;
+		xoffset = -height;
+	}
 	plot.append("text")
 		.attr("class", "label")
 		.attr("x", width/2. + margin.left)
-		.attr("y", height + margin.bottom-20)
+		.attr("y", yoffset)
 		.style("text-anchor", "middle")
 		.text(xTitle);
 	plot.append("text")
 		.attr("class", "label")
 		.attr("transform", "rotate(-90)")
-		.attr("x", -height/2)
+		.attr("x", xoffset)
 		.attr("y", 20)
 		.style("text-anchor", "middle")
 		.text(yTitle)
-
 
 
 	//add the data (from external function)
@@ -151,9 +178,11 @@ function createPlot(data, width, height, margin, xTitle, yTitle, left=0, top=0, 
 
 	function zoom() {
 		var t = plot.transition().duration(tDuration);
-		plot.select(".axis--x").transition(t).call(xAxis);
-		plot.select(".axis--y").transition(t).call(yAxis);
-		plot.selectAll("circle").transition(t)
+		plot.select(".axis-x-top").transition(t).call(xAxisTop);
+		plot.select(".axis-x-bottom").transition(t).call(xAxisBottom);
+		plot.select(".axis-y-left").transition(t).call(yAxisLeft);
+		plot.select(".axis-y-right").transition(t).call(yAxisRight);
+			plot.selectAll("circle").transition(t)
 			.attr("cx", function(d) {return xScale(+d.x); })
 			.attr("cy", function(d) {return yScale(+d.y); });
 		plot.selectAll(".error-line").transition(t)
@@ -208,30 +237,33 @@ function updatePhasePlot(multiple){
 //create the plots
 function startPlotting(){
 	//raw data
-	var	margin = {top: 0, right: 0, bottom: 60, left: 60},
-		width = 500,
-		height = 300;
+	var	marginDays = {top: 50, right: 5, bottom: 5, left: 60},
+		marginPhase = {top: 5, right: 5, bottom: 60, left: 60},
+		heightDays = 100,
+		heightPhase = 300,
+		width = 500;
+
 	//reformat the data -- easier for plotting
 	inputData.obsmjd.forEach(function(d, i){
 		rawData.push({"x":parseFloat(inputData.obsmjd[i]), "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
 	})
-	rawPlot = createPlot(rawData, width, height, margin, "Days", "Brightness");
+	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness", "rawPlot", topXlabel=true);
 
 	//phase plot
 	var period = parseFloat(inputData.period); 
 	inputData.obsmjd.forEach(function(d, i){
 		phaseData.push({"x":(parseFloat(inputData.obsmjd[i]) % period)/period, "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
 	})
-	phasePlot = createPlot(phaseData, width, height, margin, "Phase", "Brightness", left=0, top=(height + margin.bottom + margin.top));
+	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
-	//buttons
+	//buttons (these should remain a different color after clicked)
 	bwidth = 160;
 	var buttonsDiv = d3.select("body").append("div")
 		.attr('id','buttonsDiv')
 		.style('width',bwidth+'px')
 		.style('position','absolute')
-		.style('top', '360px')
-		.style('left', '500px');
+		.style('top', (heightDays + marginDays.top + marginDays.bottom + 50) + 'px')
+		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px');
 	var wholePeriod = d3.select("#buttonsDiv").append('input')
 		.attr('id', 'wholePeriodButton')
 		.style('width',bwidth+'px')
