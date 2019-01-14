@@ -73,7 +73,7 @@ function addData(data, plot, xScale, yScale){
 //////////////
 // setup the plot
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, fontsize="18pt"){
+function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt"){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
@@ -104,18 +104,22 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	var gXbottom = plot.append("g")
 		.attr("class", "axis axis-x-bottom")
 		.attr("transform", "translate(0," + (height + margin.top) + ")")
+		.style("font-size", axisFontsize)
 		.call(xAxisBottom)
 	var gXtop = plot.append("g")
 		.attr("class", "axis axis-x-top")
 		.attr("transform", "translate(0," + (margin.top) + ")")
+		.style("font-size", axisFontsize)
 		.call(xAxisTop)
 	var gYleft = plot.append("g")
 		.attr("transform", "translate(" + margin.left + ",0)")
 		.attr("class", "axis axis-y-left")
+		.style("font-size", axisFontsize)
 		.call(yAxisLeft)
 	var gYright = plot.append("g")
 		.attr("transform", "translate(" + (width + margin.left) + ",0)")
 		.attr("class", "axis axis-y-right axis-blank")
+		.style("font-size", axisFontsize)
 		.call(yAxisRight)
 
 	//cleanup ticks
@@ -141,7 +145,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("x", width/2. + margin.left)
 		.attr("y", yoffset)
 		.style("text-anchor", "middle")
-		.style("font-size", fontsize)
+		.style("font-size", labelFontsize)
 		.html(xTitle);
 	plot.append("text")
 		.attr("class", "label")
@@ -149,7 +153,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("x", xoffset)
 		.attr("y", 20)
 		.style("text-anchor", "middle")
-		.style("font-size", fontsize)
+		.style("font-size", labelFontsize)
 		.html(yTitle)
 
 
@@ -248,8 +252,8 @@ function updatePhasePlot(multiple, buttonID=null){
 //create the plots
 function startPlotting(){
 	//raw data
-	var	marginDays = {top: 50, right: 10, bottom: 5, left: 60},
-		marginPhase = {top: 5, right: 10, bottom: 60, left: 60},
+	var	marginDays = {top: 50, right: 15, bottom: 5, left: 65},
+		marginPhase = {top: 5, right: 15, bottom: 65, left: 65},
 		heightDays = 100,
 		heightPhase = 300,
 		width = 500;
@@ -277,7 +281,7 @@ function startPlotting(){
 
 	});
 
-	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "rawPlot", topXlabel=true, left=0, top=0, fontsize="12pt");
+	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "rawPlot", topXlabel=true, left=0, top=0, labelFontsize="12pt", axisFontsize="10pt");
 
 	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
