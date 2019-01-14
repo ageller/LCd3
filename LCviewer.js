@@ -8,11 +8,14 @@ var	idleTimeout,
 //will store plots
 var rawPlot,phasePlot;
 
-//will store the data
-var rawData = [],
-	phaseData = [],
-	inputData,
-	inputPeriods;
+//will store the data from the file
+var inputData
+
+//will store reformatted data (somewhat wasteful!)
+var phaseData = [],
+	rawData = [];
+
+var ppos = 0; //which filter to use to define the period
 
 d3.json("data/27882110006813.json")
 	.then(function(data) {
@@ -23,12 +26,12 @@ d3.json("data/27882110006813.json")
 //////////////
 // add data to plot
 //////////////
-function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#DC143C"){
+function addData(data, plot, xScale, yScale){
 	// Add Error Line
 	plot.append("g").selectAll("line")
 		.data(data).enter()
 			.append("line")
-			.style("stroke", errColor)
+			.style("stroke", function(d) {return d.errColor;})
 			.attr("class", "error-line")
 			.attr("x1", function(d) {return xScale(+d.x);})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
@@ -39,7 +42,7 @@ function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#D
 	plot.append("g").selectAll("line")
 		.data(data).enter()
 			.append("line")
-			.style("stroke", errColor)
+			.style("stroke", function(d) {return d.errColor;})
 			.attr("class", "error-cap error-cap-top")
 			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
@@ -50,7 +53,7 @@ function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#D
 	plot.append("g").selectAll("line")
 		.data(data).enter()
 			.append("line")
-			.style("stroke", errColor)
+			.style("stroke", function(d) {return d.errColor;})
 			.attr("class", "error-cap error-cap-bottom")
 			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
 			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
@@ -60,7 +63,7 @@ function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#D
 	plot.append("g").selectAll("circle")
 		.data(data).enter()
 			.append("circle")
-			.style("fill", circleColor)
+			.style("fill", function(d) {return d.circleColor;})
 			.attr("class", "dot circle")
 			.attr("r", 3.5)
 			.attr("cx", function(d) { return xScale(+d.x); })
@@ -70,7 +73,7 @@ function addData(data, plot, xScale, yScale, circleColor="#DC143C", errColor="#D
 //////////////
 // setup the plot
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, circleColor="#DC143C", errColor="#DC143C"){
+function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
@@ -82,6 +85,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		xAxisTop = d3.axisTop(xScale),
 		yAxisLeft = d3.axisLeft(yScale),
 		yAxisRight = d3.axisLeft(yScale);
+
 
 	var xExtent = d3.extent(data, function(d) { return +d.x; }),
 		yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
@@ -148,7 +152,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 	//add the data (from external function)
-	addData(data, plot, xScale, yScale, circleColor, errColor);
+	addData(data, plot, xScale, yScale);
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
@@ -208,17 +212,20 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 }
 
 function updatePhasePlot(multiple, buttonID=null){
-	var period = inputData.period*multiple;
 
 	d3.selectAll('.button').classed('clicked', false);
 	d3.select(buttonID).classed('clicked', true);
 
-	phaseData = [];
-	inputData.obsmjd.forEach(function(d, i){
-		phaseData.push({"x":(parseFloat(inputData.obsmjd[i]) % period)/period, "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
-	})
+	var period = inputData[inputData.filters[ppos]].period*multiple;
 
-	//addData(phaseData, phasePlot.plot, phasePlot.xScale, phasePlot.yScale)
+	var p = 0;
+	inputData.filters.forEach(function(filter, j){
+
+		inputData[filter].obsmjd.forEach(function(d, i){
+			phaseData[p].x = (parseFloat(inputData[filter].obsmjd[i]) % period)/period;
+			p += 1;
+		})
+	});
 
 	//update the data with same transition duration as zoom above
 	var t = phasePlot.plot.transition().duration(tDuration);			
@@ -245,17 +252,31 @@ function startPlotting(){
 		heightPhase = 300,
 		width = 500;
 
-	//reformat the data -- easier for plotting
-	inputData.obsmjd.forEach(function(d, i){
-		rawData.push({"x":parseFloat(inputData.obsmjd[i]), "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
-	})
-	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness", "rawPlot", topXlabel=true);
+	var period = inputData[inputData.filters[ppos]].period;
 
-	//phase plot
-	var period = parseFloat(inputData.period); 
-	inputData.obsmjd.forEach(function(d, i){
-		phaseData.push({"x":(parseFloat(inputData.obsmjd[i]) % period)/period, "y":parseFloat(inputData.mag_autocorr_mean[i]), "ye":parseFloat(inputData.magerr_auto[i])})
-	})
+	inputData.filters.forEach(function(filter, j){
+
+		//reformat the data -- easier for plotting
+
+		inputData[filter].obsmjd.forEach(function(d, i){
+			rawData.push({"x":parseFloat(inputData[filter].obsmjd[i]), 
+				"y":parseFloat(inputData[filter].mag_autocorr_mean[i]), 
+				"ye":parseFloat(inputData[filter].magerr_auto[i]),  
+				"circleColor":inputData[filter].color, 
+				"errColor":inputData[filter].color
+			});
+			phaseData.push({"x":(parseFloat(inputData[filter].obsmjd[i]) % period)/period, 
+				"y":parseFloat(inputData[filter].mag_autocorr_mean[i]), 
+				"ye":parseFloat(inputData[filter].magerr_auto[i]),
+				"circleColor":inputData[filter].color, 
+				"errColor":inputData[filter].color
+			});
+		})
+
+	});
+
+	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness", "rawPlot", topXlabel=true, left=0, top=0);
+
 	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
 	//buttons
