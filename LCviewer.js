@@ -128,10 +128,10 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	} else{
 		gXtop.classed('axis-blank', true);
 	}
-	if (height < 200){
-		gYleft.call(yAxisLeft.ticks(5));
-		gYright.call(yAxisLeft.ticks(5));
-	}
+	gYleft.call(yAxisLeft.ticks(5));
+	gYright.call(yAxisRight.ticks(5));
+	gXtop.call(xAxisTop.ticks(5));
+	gXbottom.call(xAxisBottom.ticks(5));
 
 	//axes labels
 	var yoffset = height + margin.bottom - 20,
