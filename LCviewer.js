@@ -73,7 +73,7 @@ function addData(data, plot, xScale, yScale){
 //////////////
 // setup the plot
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0){
+function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, fontsize="18pt"){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
@@ -141,14 +141,16 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("x", width/2. + margin.left)
 		.attr("y", yoffset)
 		.style("text-anchor", "middle")
-		.text(xTitle);
+		.style("font-size", fontsize)
+		.html(xTitle);
 	plot.append("text")
 		.attr("class", "label")
 		.attr("transform", "rotate(-90)")
 		.attr("x", xoffset)
 		.attr("y", 20)
 		.style("text-anchor", "middle")
-		.text(yTitle)
+		.style("font-size", fontsize)
+		.html(yTitle)
 
 
 	//add the data (from external function)
@@ -275,9 +277,9 @@ function startPlotting(){
 
 	});
 
-	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness", "rawPlot", topXlabel=true, left=0, top=0);
+	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "rawPlot", topXlabel=true, left=0, top=0, fontsize="12pt");
 
-	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
+	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
 	//buttons
 	bwidth = 160;
