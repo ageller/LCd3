@@ -1,3 +1,5 @@
+//To Do : clip data outside of plots (https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb)
+
 
 //the params object holds all "global" variables
 var params;
@@ -19,6 +21,7 @@ function defineParams(){
 		//will store plots
 		this.rawPlot;
 		this.phasePlot;
+		this.CMDPlot;
 
 		this.ppos = 0; //which filter to use to define the period (for inputData.filters)
 		this.mpos = 0; //which multiple to use (for inputData.multiples)
@@ -29,12 +32,58 @@ function defineParams(){
 }
 defineParams();
 
+//////////////
+// helper function since d3.v4 removed d3.transform
+// https://stackoverflow.com/questions/38224875/replacing-d3-transform-in-d3-v4
+//////////////
+function getTransformation(transform) {
+	var e = 0,
+		f = 0,
+		a = 0,
+		b = 0,
+		skewX = 0,
+		scaleX = 1,
+		scaleY = 1;
 
+	if (transform != null){
+		// Create a dummy g for calculation purposes only. This will never
+		// be appended to the DOM and will be discarded once this function 
+		// returns.
+		var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+		// Set the transform attribute to the provided string value.
+		g.setAttributeNS(null, "transform", transform);
+
+		// consolidate the SVGTransformList containing all transformations
+		// to a single SVGTransform of type SVG_TRANSFORM_MATRIX and get
+		// its SVGMatrix. 
+		var matrix = g.transform.baseVal.consolidate().matrix;
+
+		// Below calculations are taken and adapted from the private function
+		// transform/decompose.js of D3's module d3-interpolate.
+		var {a, b, c, d, e, f} = matrix;   // ES6, if this doesn't work, use below assignment
+		// var a=matrix.a, b=matrix.b, c=matrix.c, d=matrix.d, e=matrix.e, f=matrix.f; // ES5
+		var scaleX, scaleY, skewX;
+		if (scaleX = Math.sqrt(a * a + b * b)) a /= scaleX, b /= scaleX;
+		if (skewX = a * c + b * d) c -= a * skewX, d -= b * skewX;
+		if (scaleY = Math.sqrt(c * c + d * d)) c /= scaleY, d /= scaleY, skewX /= scaleY;
+		if (a * d < b * c) a = -a, b = -b, skewX = -skewX, scaleX = -scaleX;
+	}
+
+	return {
+		translateX: e,
+		translateY: f,
+		rotate: Math.atan2(b, a) * 180 / Math.PI,
+		skewX: Math.atan(skewX) * 180 / Math.PI,
+		scaleX: scaleX,
+		scaleY: scaleY
+	};
+}
 
 //////////////
 // add data to plot
 //////////////
-function addData(data, plot, xScale, yScale){
+function addData(data, plot, xScale, yScale, r=3.5){
 	// Add Error Line
 	plot.append("g").selectAll("line")
 		.data(data).enter()
@@ -73,7 +122,7 @@ function addData(data, plot, xScale, yScale){
 			.append("circle")
 			.style("fill", function(d) {return d.circleColor;})
 			.attr("class", "dot circle")
-			.attr("r", 3.5)
+			.attr("r", r)
 			.attr("cx", function(d) { return xScale(+d.x); })
 			.attr("cy", function(d) { return yScale(+d.y); })
 }
@@ -81,13 +130,14 @@ function addData(data, plot, xScale, yScale){
 //////////////
 // setup the plot
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt"){
+function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false, backgroundImage = null){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
 	var xScale = d3.scaleLinear().range(x0),
 		yScale = d3.scaleLinear().range(y0);
 
+	var r0 = 3.5; //circle radius
 
 	var xAxisBottom = d3.axisBottom(xScale),
 		xAxisTop = d3.axisTop(xScale),
@@ -95,8 +145,13 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		yAxisRight = d3.axisLeft(yScale);
 
 
-	var xExtent = d3.extent(data, function(d) { return +d.x; }),
+	if (xExtent == null) {
+		xExtent = d3.extent(data, function(d) { return +d.x; })
+	}
+	if (yExtent == null){
 		yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
+	}
+
 
 	xScale.domain(xExtent).nice();
 	yScale.domain(yExtent).nice();
@@ -108,6 +163,22 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("height", (height + margin.top + margin.bottom))
 		.attr("transform", "translate(" + left + "," + top + ")")
 
+	var image = null,
+		clip = null;
+	if (backgroundImage != null){
+		image = plot.append("image")
+			.attr("width", width)
+			.attr("height", height)
+			.attr("x", margin.left)
+			.attr("y", margin.top)
+			.attr('clip-path', null)
+			.attr("xlink:href", backgroundImage);
+		var clipPath = plot.append("clipPath")
+			.attr("id","clip");
+		clip = clipPath.append('rect');
+		console.log(image.node())
+
+	}
 	//axes
 	var gXbottom = plot.append("g")
 		.attr("class", "axis axis-x-bottom")
@@ -141,6 +212,13 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	gXtop.call(xAxisTop.ticks(5));
 	gXbottom.call(xAxisBottom.ticks(5));
 
+	if (hideAllTicks){
+		gXbottom.classed('axis-blank', true);
+		gXtop.classed('axis-blank', true);
+		gYleft.classed('axis-blank', true);
+		gYright.classed('axis-blank', true);
+	}
+
 	//axes labels
 	var yoffset = height + margin.bottom - 20,
 		xoffset = -height/2.
@@ -166,7 +244,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 	//add the data (from external function)
-	addData(data, plot, xScale, yScale);
+	addData(data, plot, xScale, yScale, r=r0);
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
@@ -176,31 +254,43 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 	// helper functions for brushing and zooming
+
 	function brushended() {
 		var s = d3.event.selection;
+		var translate = getTransformation(null)
+
 		if (!s) {
 			if (!params.idleTimeout) return params.idleTimeout = setTimeout(idled, params.idleDelay);
 			xScale.domain(xExtent).nice();
 			yScale.domain(yExtent).nice();
+			s = [[margin.left, margin.top],
+				[plot.attr('width') - margin.right, plot.attr('height') - margin.bottom]];
+			translate = getTransformation(null)
+
 		} else {
 			xScale.domain([xScale.invert(s[0][0]), xScale.invert(s[1][0])]).nice();
 			yScale.domain([yScale.invert(s[1][1]), yScale.invert(s[0][1])]).nice();
 			plot.select(".brush").call(brush.move, null);
+			if (backgroundImage != null){
+				translate = getTransformation(image.attr("transform"))
+			}
 		}
-		zoom();
+
+		zoom(s, translate);
 	}
 
 	function idled() {
 		params.idleTimeout = null;
 	}
 
-	function zoom() {
+	function zoom(s, translate) {
 		var t = plot.transition().duration(params.tDuration);
+		//the points
 		plot.select(".axis-x-top").transition(t).call(xAxisTop);
 		plot.select(".axis-x-bottom").transition(t).call(xAxisBottom);
 		plot.select(".axis-y-left").transition(t).call(yAxisLeft);
 		plot.select(".axis-y-right").transition(t).call(yAxisRight);
-			plot.selectAll("circle").transition(t)
+		plot.selectAll("circle").transition(t)
 			.attr("cx", function(d) {return xScale(+d.x); })
 			.attr("cy", function(d) {return yScale(+d.y); });
 		plot.selectAll(".error-line").transition(t)
@@ -218,6 +308,41 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
 			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+
+		//the image
+		if (backgroundImage != null){
+			var sWidth = s[1][0] - s[0][0];
+			var sHeight = s[1][1] - s[0][1];
+			var scaleX = width/sWidth;
+			var scaleY = height/sHeight;
+
+			var sX = scaleX*translate.scaleX;
+			var sY = scaleY*translate.scaleY;
+			var dx = (margin.left - s[0][0])*sX + translate.translateX;
+			var dy = (margin.top  - s[0][1])*sY + translate.translateY;
+
+
+			console.log(s, s[0][0], s[0][1],translate.translateX, translate.translateY, translate.scaleX, translate.scaleY, scaleX, scaleY, sX, sY, dx, dy)
+
+			//now scale and translate the image
+			image.transition(t)
+				.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
+
+			//increase the size of the circle
+			plot.selectAll("circle").transition(t).attr("r",r0*sX);
+
+			// update clip attributes to reflect selection
+			// clip.attr("width", width)//sWidth)
+			// 	.attr("height", height)//sHeight)
+			// 	.attr("x",margin.left)//s[0][0])
+			// 	.attr("y",margin.right)//s[0][1])
+			// // apply clipping mask
+			// image.attr('clip-path', 'url(#clip)');
+
+
+		}
+
+
 	}
 
 	return {"plot":plot,
@@ -287,10 +412,14 @@ function updatePhasePlot(){
 function startPlotting(){
 	//raw data
 	var	marginDays = {top: 50, right: 15, bottom: 5, left: 65},
-		marginPhase = {top: 5, right: 15, bottom: 65, left: 65},
 		heightDays = 100,
+		widthDays = 500,
+		marginPhase = {top: 5, right: 15, bottom: 65, left: 65},
 		heightPhase = 300,
-		width = 500;
+		widthPhase = widthDays, 
+		marginCMD = {top: 5, right: 5, bottom: 65, left: 65},
+		heightCMD = heightDays + heightPhase + 25, //I don't quite understand the sizing here
+		widthCMD = 400;
 
 	var period = params.inputData[params.inputData.filters[params.ppos]].period;
 
@@ -315,17 +444,64 @@ function startPlotting(){
 
 	});
 
-	params.rawPlot = createPlot(params.rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "params.rawPlot", topXlabel=true, left=0, top=0, labelFontsize="12pt", axisFontsize="10pt");
+	//dummy data for now
+	var foo = [{"x":5000,
+				"y":0,
+				"ye":1,
+				"circleColor":"black",
+				"errColor":"none"}];
+	params.CMDPlot = createPlot(foo, 
+								widthCMD, 
+								heightCMD, 
+								marginCMD, 
+								"&larr;Temperature", 
+								"Brightness&rarr;", 
+								"CMDPlot", 
+								topXlabel=false, 
+								left=0,
+								top=(marginDays.top - marginDays.bottom), //I don't quite understand the position here
+								labelFontsize="18pt", 
+								axisFontsize="12pt",
+								xExtent = [9000, 1000], 
+								yExtent=[5, -5],
+								hideAllTicks = true, 
+								backgroundImage = "data/tmpCMDbackground.png"); 
 
-	params.phasePlot = createPlot(params.phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "params.phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
+	var leftPos = (widthCMD + marginCMD.left + marginCMD.right + 40);
+	params.rawPlot = createPlot(params.rawData, 
+								widthDays, 
+								heightDays, 
+								marginDays, 
+								"Time (d)", 
+								"Brightness&rarr;", 
+								"rawPlot", 
+								topXlabel=true, 
+								left=leftPos, 
+								top=0, 
+								labelFontsize="12pt", 
+								axisFontsize="10pt");
+
+	params.phasePlot = createPlot(params.phaseData, 
+								widthPhase, 
+								heightPhase, 
+								marginPhase, 
+								"Phase", 
+								"Brightness&rarr;", 
+								"phasePlot", 
+								topXlabel=false, 
+								left=leftPos, 
+								top=(heightDays + marginPhase.bottom + marginPhase.top));
+
+
 
 	//create the buttons
+	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 80) + 'px'
 	var periodSelectDiv = d3.select("body").append("div")
 		.attr('id','periodSelectDiv')
 		.attr('class','buttonsDiv')
 		.style('position','absolute')
-		.style('top', (marginDays.top + 40) + 'px')
-		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
+		.style('top', (marginDays.top + 25) + 'px')
+		.style('left', leftPos)
 		.text('1) Select the filter.')
 	params.inputData.filters.forEach(function(filt, j){
 		periodSelectDiv.append('div')
@@ -348,7 +524,7 @@ function startPlotting(){
 		.attr('class','buttonsDiv')
 		.style('position','absolute')
 		.style('top', (bsize.y + bsize.height + 20) + 'px')
-		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
+		.style('left', leftPos)
 		.text('2) Modify the period.')
 	params.inputData.multiples.forEach(function(m, j){
 		periodModDiv.append('div')
