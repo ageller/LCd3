@@ -20,11 +20,8 @@ function defineParams(){
 		this.rawPlot;
 		this.phasePlot;
 
-		this.ppos = 0; //which filter to use to define the period
-		this.mpos = 0; //which multiple to use
-
-		this.multiples = [1, 0.5, 2., 3.]; //multiplicative factor for the period
-		this.mnames = {1.:"whole period",0.5:"half the period",2.:"twice the period",3.:"triple the period"}; //names for the buttons
+		this.ppos = 0; //which filter to use to define the period (for inputData.filters)
+		this.mpos = 0; //which multiple to use (for inputData.multiples)
 
 	}
 	params = new ParamsInit();
@@ -257,7 +254,7 @@ function updateButtons(){
 //////////////
 function updatePhasePlot(){
 
-	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.multiples[params.mpos];
+	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.inputData.multiples[params.mpos];
 
 	var p = 0;
 	params.inputData.filters.forEach(function(filter, j){
@@ -353,11 +350,11 @@ function startPlotting(){
 		.style('top', (bsize.y + bsize.height + 20) + 'px')
 		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
 		.text('2) Modify the period.')
-	params.multiples.forEach(function(m, j){
+	params.inputData.multiples.forEach(function(m, j){
 		periodModDiv.append('div')
 			.attr('id', 'periodModButton'+j)
 			.attr('class', 'button periodModButton')
-			.text(params.mnames[m])
+			.text(params.inputData.mnames[j])
 			.on('click',function(d){
 				params.mpos = j;
 				updateButtons()
