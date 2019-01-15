@@ -1,31 +1,38 @@
 
-//some initial definitions
-var	idleTimeout,
-	idleDelay = 350,
-	errLen = 4, //error cap
-	tDuration = 750;
+//the params object holds all "global" variables
+var params;
+function defineParams(){
+	ParamsInit = function() {
+		//settings for plots
+		this.idleTimeout;
+		this.idleDelay = 350,
+		this.errLen = 4, //error cap
+		this.tDuration = 750;
 
-//will store plots
-var rawPlot,phasePlot;
+		//will store the data from the file
+		this.inputData;
 
-//will store the data from the file
-var inputData;
+		//will store reformatted data (somewhat wasteful!)
+		this.rawData = [];
+		this.phaseData = [];
 
-//will store reformatted data (somewhat wasteful!)
-var phaseData = [],
-	rawData = [];
+		//will store plots
+		this.rawPlot;
+		this.phasePlot;
 
-var ppos = 0; //which filter to use to define the period
-var mpos = 0; //which multiple to use
+		this.ppos = 0; //which filter to use to define the period
+		this.mpos = 0; //which multiple to use
 
-var multiples = [1, 0.5, 2., 3.]; //multiplicative factor for the period
-var mnames = {1.:"whole period",0.5:"half the period",2.:"twice the period",3.:"triple the period"}; //names for the buttons
+		this.multiples = [1, 0.5, 2., 3.]; //multiplicative factor for the period
+		this.mnames = {1.:"whole period",0.5:"half the period",2.:"twice the period",3.:"triple the period"}; //names for the buttons
 
-d3.json("data/27882110006813.json")
-	.then(function(data) {
-		inputData = data;
-		startPlotting();
-	});
+	}
+	params = new ParamsInit();
+
+}
+defineParams();
+
+
 
 //////////////
 // add data to plot
@@ -48,9 +55,9 @@ function addData(data, plot, xScale, yScale){
 			.append("line")
 			.style("stroke", function(d) {return d.errColor;})
 			.attr("class", "error-cap error-cap-top")
-			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + errLen;})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y + d.ye);});
 		
 	// Add Error Bottom Cap
@@ -59,9 +66,9 @@ function addData(data, plot, xScale, yScale){
 			.append("line")
 			.style("stroke", function(d) {return d.errColor;})
 			.attr("class", "error-cap error-cap-bottom")
-			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + errLen;})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 	
 	plot.append("g").selectAll("circle")
@@ -175,7 +182,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	function brushended() {
 		var s = d3.event.selection;
 		if (!s) {
-			if (!idleTimeout) return idleTimeout = setTimeout(idled, idleDelay);
+			if (!params.idleTimeout) return params.idleTimeout = setTimeout(idled, params.idleDelay);
 			xScale.domain(xExtent).nice();
 			yScale.domain(yExtent).nice();
 		} else {
@@ -187,11 +194,11 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	}
 
 	function idled() {
-		idleTimeout = null;
+		params.idleTimeout = null;
 	}
 
 	function zoom() {
-		var t = plot.transition().duration(tDuration);
+		var t = plot.transition().duration(params.tDuration);
 		plot.select(".axis-x-top").transition(t).call(xAxisTop);
 		plot.select(".axis-x-bottom").transition(t).call(xAxisBottom);
 		plot.select(".axis-y-left").transition(t).call(yAxisLeft);
@@ -205,14 +212,14 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			.attr("x2", function(d) {return xScale(+d.x);})
 			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 		plot.selectAll(".error-cap-top").transition(t)
-			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + errLen;})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y + d.ye);});
 		plot.selectAll(".error-cap-bottom").transition(t)
-			.attr("x1", function(d) {return xScale(+d.x) - errLen;})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + errLen;})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 	}
 
@@ -221,10 +228,13 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			"yScale":yScale};
 }
 
+//////////////
+// updates to the buttons
+//////////////
 function updateButtons(){
 
-	var periodSelectID = "#periodSelectButton"+ppos;
-	var periodModID = "#periodModButton"+mpos;
+	var periodSelectID = "#periodSelectButton"+params.ppos;
+	var periodModID = "#periodModButton"+params.mpos;
 
 	//reset all buttons
 	var b = d3.selectAll('.button');
@@ -236,41 +246,47 @@ function updateButtons(){
 
 	//period modification box
 	b = d3.select(periodModID)
-	b.style('background-color',inputData[inputData.filters[ppos]].color);
+	b.style('background-color',params.inputData[params.inputData.filters[params.ppos]].color);
 	b.classed('clicked', true);
 
 
 }
+
+//////////////
+// updates to the phase plot (including transitions)
+//////////////
 function updatePhasePlot(){
 
-	var period = inputData[inputData.filters[ppos]].period*multiples[mpos];
+	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.multiples[params.mpos];
 
 	var p = 0;
-	inputData.filters.forEach(function(filter, j){
+	params.inputData.filters.forEach(function(filter, j){
 
-		inputData[filter].obsmjd.forEach(function(d, i){
-			phaseData[p].x = (parseFloat(inputData[filter].obsmjd[i]) % period)/period;
+		params.inputData[filter].obsmjd.forEach(function(d, i){
+			params.phaseData[p].x = (parseFloat(params.inputData[filter].obsmjd[i]) % period)/period;
 			p += 1;
 		})
 	});
 
 	//update the data with same transition duration as zoom above
-	var t = phasePlot.plot.transition().duration(tDuration);			
-	phasePlot.plot.selectAll("circle").data(phaseData).transition(t)
-		.attr("cx", function(d,i) {return phasePlot.xScale(+phaseData[i].x); })
-	phasePlot.plot.selectAll(".error-line").data(phaseData).transition(t)
-		.attr("x1", function(d,i) {return phasePlot.xScale(+phaseData[i].x);})
-		.attr("x2", function(d,i) {return phasePlot.xScale(+phaseData[i].x);})
-	phasePlot.plot.selectAll(".error-cap-top").data(phaseData).transition(t)
-		.attr("x1", function(d,i) {return phasePlot.xScale(+phaseData[i].x) - errLen;})
-		.attr("x2", function(d,i) {return phasePlot.xScale(+phaseData[i].x) + errLen;})
-	phasePlot.plot.selectAll(".error-cap-bottom").data(phaseData).transition(t)
-		.attr("x1", function(d,i) {return phasePlot.xScale(+phaseData[i].x) - errLen;})
-		.attr("x2", function(d,i) {return phasePlot.xScale(+phaseData[i].x) + errLen;})
+	var t = params.phasePlot.plot.transition().duration(params.tDuration);			
+	params.phasePlot.plot.selectAll("circle").data(params.phaseData).transition(t)
+		.attr("cx", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x); })
+	params.phasePlot.plot.selectAll(".error-line").data(params.phaseData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x);})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x);})
+	params.phasePlot.plot.selectAll(".error-cap-top").data(params.phaseData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) - params.errLen;})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) + params.errLen;})
+	params.phasePlot.plot.selectAll(".error-cap-bottom").data(params.phaseData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) - params.errLen;})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) + params.errLen;})
 
 }
 
-//create the plots
+//////////////
+// create the plots
+//////////////
 function startPlotting(){
 	//raw data
 	var	marginDays = {top: 50, right: 15, bottom: 5, left: 65},
@@ -279,32 +295,32 @@ function startPlotting(){
 		heightPhase = 300,
 		width = 500;
 
-	var period = inputData[inputData.filters[ppos]].period;
+	var period = params.inputData[params.inputData.filters[params.ppos]].period;
 
-	inputData.filters.forEach(function(filter, j){
+	params.inputData.filters.forEach(function(filter, j){
 
 		//reformat the data -- easier for plotting
 
-		inputData[filter].obsmjd.forEach(function(d, i){
-			rawData.push({"x":parseFloat(inputData[filter].obsmjd[i]), 
-				"y":parseFloat(inputData[filter].mag_autocorr_mean[i]), 
-				"ye":parseFloat(inputData[filter].magerr_auto[i]),  
-				"circleColor":inputData[filter].color, 
-				"errColor":inputData[filter].color
+		params.inputData[filter].obsmjd.forEach(function(d, i){
+			params.rawData.push({"x":parseFloat(params.inputData[filter].obsmjd[i]), 
+				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
+				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),  
+				"circleColor":params.inputData[filter].color, 
+				"errColor":params.inputData[filter].color
 			});
-			phaseData.push({"x":(parseFloat(inputData[filter].obsmjd[i]) % period)/period, 
-				"y":parseFloat(inputData[filter].mag_autocorr_mean[i]), 
-				"ye":parseFloat(inputData[filter].magerr_auto[i]),
-				"circleColor":inputData[filter].color, 
-				"errColor":inputData[filter].color
+			params.phaseData.push({"x":(parseFloat(params.inputData[filter].obsmjd[i]) % period)/period, 
+				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
+				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
+				"circleColor":params.inputData[filter].color, 
+				"errColor":params.inputData[filter].color
 			});
 		})
 
 	});
 
-	rawPlot = createPlot(rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "rawPlot", topXlabel=true, left=0, top=0, labelFontsize="12pt", axisFontsize="10pt");
+	params.rawPlot = createPlot(params.rawData, width, heightDays, marginDays, "Time (d)", "Brightness&rarr;", "params.rawPlot", topXlabel=true, left=0, top=0, labelFontsize="12pt", axisFontsize="10pt");
 
-	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
+	params.phasePlot = createPlot(params.phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "params.phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
 	//create the buttons
 	var periodSelectDiv = d3.select("body").append("div")
@@ -314,19 +330,19 @@ function startPlotting(){
 		.style('top', (marginDays.top + 40) + 'px')
 		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
 		.text('1) Select the filter.')
-	inputData.filters.forEach(function(filt, j){
+	params.inputData.filters.forEach(function(filt, j){
 		periodSelectDiv.append('div')
 			.attr('id', 'periodSelectButton'+j)
 			.attr('class', 'button')
-			.style('background-color', inputData[filt].color)
+			.style('background-color', params.inputData[filt].color)
 			.text(filt)
 			.on('click',function(d){
-				ppos = j;
+				params.ppos = j;
 				updateButtons();
 				updatePhasePlot();
 			});
 	});
-	d3.select("#periodSelectButton"+ppos).classed('clicked', true)
+	d3.select("#periodSelectButton"+params.ppos).classed('clicked', true)
 
 	var bsize = periodSelectDiv.node().getBoundingClientRect();
 
@@ -337,20 +353,29 @@ function startPlotting(){
 		.style('top', (bsize.y + bsize.height + 20) + 'px')
 		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
 		.text('2) Modify the period.')
-	multiples.forEach(function(m, j){
+	params.multiples.forEach(function(m, j){
 		periodModDiv.append('div')
 			.attr('id', 'periodModButton'+j)
 			.attr('class', 'button periodModButton')
-			.text(mnames[m])
+			.text(params.mnames[m])
 			.on('click',function(d){
-				mpos = j;
+				params.mpos = j;
 				updateButtons()
 				updatePhasePlot()
 			});	
 		});
-	b = d3.select("#periodModButton"+mpos);
+	b = d3.select("#periodModButton"+params.mpos);
 	b.classed('clicked', true);
-	b.style('background-color',inputData[inputData.filters[ppos]].color);
+	b.style('background-color',params.inputData[params.inputData.filters[params.ppos]].color);
 
 
 }
+
+//////////////
+// first, read in the data
+//////////////
+d3.json("data/27882110006813.json")
+	.then(function(data) {
+		params.inputData = data;
+		startPlotting();
+	});
