@@ -9,13 +9,17 @@ var	idleTimeout,
 var rawPlot,phasePlot;
 
 //will store the data from the file
-var inputData
+var inputData;
 
 //will store reformatted data (somewhat wasteful!)
 var phaseData = [],
 	rawData = [];
 
 var ppos = 0; //which filter to use to define the period
+var mpos = 0; //which multiple to use
+
+var multiples = [1, 0.5, 2., 3.]; //multiplicative factor for the period
+var mnames = {1.:"whole period",0.5:"half the period",2.:"twice the period",3.:"triple the period"}; //names for the buttons
 
 d3.json("data/27882110006813.json")
 	.then(function(data) {
@@ -217,12 +221,29 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			"yScale":yScale};
 }
 
-function updatePhasePlot(multiple, buttonID=null){
+function updateButtons(){
 
-	d3.selectAll('.button').classed('clicked', false);
-	d3.select(buttonID).classed('clicked', true);
+	var periodSelectID = "#periodSelectButton"+ppos;
+	var periodModID = "#periodModButton"+mpos;
 
-	var period = inputData[inputData.filters[ppos]].period*multiple;
+	//reset all buttons
+	var b = d3.selectAll('.button');
+	b.classed('clicked', false);
+	d3.selectAll('.periodModButton').style('background-color',null)
+
+	//filter select box
+	d3.select(periodSelectID).classed('clicked', true);
+
+	//period modification box
+	b = d3.select(periodModID)
+	b.style('background-color',inputData[inputData.filters[ppos]].color);
+	b.classed('clicked', true);
+
+
+}
+function updatePhasePlot(){
+
+	var period = inputData[inputData.filters[ppos]].period*multiples[mpos];
 
 	var p = 0;
 	inputData.filters.forEach(function(filter, j){
@@ -285,41 +306,51 @@ function startPlotting(){
 
 	phasePlot = createPlot(phaseData, width, heightPhase, marginPhase, "Phase", "Brightness&rarr;", "phasePlot", topXlabel=false, left=0, top=(heightDays + marginPhase.bottom + marginPhase.top));
 
-	//buttons
-	bwidth = 160;
-	var buttonsDiv = d3.select("body").append("div")
-		.attr('id','buttonsDiv')
-		.attr('class', 'button')
-		.style('width',bwidth+'px')
+	//create the buttons
+	var periodSelectDiv = d3.select("body").append("div")
+		.attr('id','periodSelectDiv')
+		.attr('class','buttonsDiv')
 		.style('position','absolute')
-		.style('top', (heightDays + marginDays.top + marginDays.bottom + 50) + 'px')
-		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px');
-	var wholePeriod = d3.select("#buttonsDiv").append('input')
-		.attr('id', 'wholePeriodButton')
-		.attr('class', 'button clicked')
-		.style('width',bwidth+'px')
-		.attr('type','button')
-		.attr('value','whole period')
-		.attr('onclick','updatePhasePlot(1., buttonID="#wholePeriodButton")');
-	var halfPeriod = d3.select("#buttonsDiv").append('input')
-		.attr('id', 'halfPeriodButton')
-		.attr('class', 'button')
-		.style('width',bwidth+'px')
-		.attr('type','button')
-		.attr('value','half the period')
-		.attr('onclick','updatePhasePlot(0.5, buttonCID="#halfPeriodButton")');
-	var twicePeriod = d3.select("#buttonsDiv").append('input')
-		.attr('id', 'twicePeriodButton')
-		.attr('class', 'button')
-		.style('width',bwidth+'px')
-		.attr('type','button')
-		.attr('value','double the period')
-		.attr('onclick','updatePhasePlot(2.0, buttonID="#twicePeriodButton")');
-	var triplePeriod = d3.select("#buttonsDiv").append('input')
-		.attr('id', 'triplePeriodButton')
-		.attr('class', 'button')
-		.style('width',bwidth+'px')
-		.attr('type','button')
-		.attr('value','triple the period')
-		.attr('onclick','updatePhasePlot(3.0, buttonID="#triplePeriodButton")');
+		.style('top', (marginDays.top + 40) + 'px')
+		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
+		.text('1) Select the filter.')
+	inputData.filters.forEach(function(filt, j){
+		periodSelectDiv.append('div')
+			.attr('id', 'periodSelectButton'+j)
+			.attr('class', 'button')
+			.style('background-color', inputData[filt].color)
+			.text(filt)
+			.on('click',function(d){
+				ppos = j;
+				updateButtons();
+				updatePhasePlot();
+			});
+	});
+	d3.select("#periodSelectButton"+ppos).classed('clicked', true)
+
+	var bsize = periodSelectDiv.node().getBoundingClientRect();
+
+	var periodModDiv = d3.select("body").append("div")
+		.attr('id','periodModDiv')
+		.attr('class','buttonsDiv')
+		.style('position','absolute')
+		.style('top', (bsize.y + bsize.height + 20) + 'px')
+		.style('left', (width + marginDays.left + marginDays.right + 50) + 'px')
+		.text('2) Modify the period.')
+	multiples.forEach(function(m, j){
+		periodModDiv.append('div')
+			.attr('id', 'periodModButton'+j)
+			.attr('class', 'button periodModButton')
+			.text(mnames[m])
+			.on('click',function(d){
+				mpos = j;
+				updateButtons()
+				updatePhasePlot()
+			});	
+		});
+	b = d3.select("#periodModButton"+mpos);
+	b.classed('clicked', true);
+	b.style('background-color',inputData[inputData.filters[ppos]].color);
+
+
 }

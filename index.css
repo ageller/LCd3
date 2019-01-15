@@ -39,10 +39,26 @@ body {
 	display:none;
 }
 
-.button{
+.buttonsDiv{
+	width:180px;
+	font-size:14pt;
+	border: 2px solid black;
 	margin:2px;
+	padding:4px;
+}
+
+.button{
+	width: 164px;
+	margin:2px;
+	padding:4px;
 	cursor:pointer;
+	border: 2px solid gray;
+	border-radius: 5px;
+	text-align: center;
+	font-size:14pt;
 }
 .clicked{
-	background-color: #67aa84;
+	border: 4px solid black;
+	margin: 0;
 }
+
