@@ -175,7 +175,12 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			.attr("xlink:href", backgroundImage);
 		var imageClipPath = plot.append("clipPath")
 			.attr("id","imageClip");
-		imageClip = imageClipPath.append('rect');
+		imageClip = imageClipPath.append('rect')
+			.attr("width", width)
+			.attr("height", height)
+			.attr("x",margin.left)
+			.attr("y",margin.right);
+		image.attr('clip-path', 'url(#imageClip)')
 
 	}
 	//axes
@@ -253,11 +258,10 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 	// helper functions for brushing and zooming
-
 	function brushended() {
+
 		var s = d3.event.selection;
 		var translate = getTransformation(null)
-
 		if (!s) {
 			if (!params.idleTimeout) return params.idleTimeout = setTimeout(idled, params.idleDelay);
 			xScale.domain(xExtent).nice();
@@ -271,10 +275,14 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			yScale.domain([yScale.invert(s[1][1]), yScale.invert(s[0][1])]);//.nice();
 			plot.select(".brush").call(brush.move, null);
 			if (backgroundImage != null){
-				translate = getTransformation(image.attr("transform"))
+				var trans = image.attr("transform");
+				if (trans == ""){
+					trans = null;
+				}
+				translate = getTransformation(trans)
 			}
-		}
 
+		}
 		zoom(s, translate);
 	}
 
@@ -283,6 +291,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	}
 
 	function zoom(s, translate) {
+
 		var t = plot.transition().duration(params.tDuration);
 		//the points
 		plot.select(".axis-x-top").transition(t).call(xAxisTop);
@@ -310,6 +319,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 		//the image
 		if (backgroundImage != null){
+
 			//distance from the edge
 			var dEdgeX = s[0][0] - translate.translateX;
 			var dEdgeY = s[0][1] - translate.translateY;
@@ -328,6 +338,31 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			var dx = margin.left - dEdgeX*scaleX ;
 			var dy = margin.top  - dEdgeY*scaleY ;
 
+			// update clip attributes to reflect selection
+			var cw = sWidth/translate.scaleX;
+			var ch = sHeight/translate.scaleY;
+			var x0 = 0;
+			var y0 = 0;
+
+			//account for previous translation and scale
+			if (translate.translateX != 0){
+				x0 = parseFloat(imageClip.attr("x")) - margin.left/translate.scaleX;
+				y0 = parseFloat(imageClip.attr("y")) - margin.top/translate.scaleY;
+			}
+			var cx = x0 + s[0][0]/translate.scaleX;
+			var cy = y0 + s[0][1]/translate.scaleY;
+
+			//transition duration
+			var tC = params.tDuration/10.;
+			if (sX == 1 && sY == 1){
+				tC = params.tDuration*2.;
+			}
+			imageClip.transition().duration(tC)
+				.attr("width", cw)
+				.attr("height", ch)
+				.attr("x",cx)
+				.attr("y",cy);
+
 			//now scale and translate the image
 			image.transition(t)
 				.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
@@ -335,14 +370,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			//increase the size of the circle
 			plot.selectAll("circle").transition(t).attr("r",r0*sX);
 
-			// update clip attributes to reflect selection
-			// imageClip.attr("width", width)//sWidth)
-			// 	.attr("height", height)//sHeight)
-			// 	.attr("x",margin.left)//s[0][0])
-			// 	.attr("y",margin.right)//s[0][1])
-			// // apply clipping mask
-			// image.attr('clip-path', 'url(#imageClip)');
-
+	
 
 		}
 
@@ -422,6 +450,7 @@ function startPlotting(){
 		heightPhase = 300,
 		widthPhase = widthDays, 
 		marginCMD = {top: 5, right: 5, bottom: 65, left: 65},
+		//marginCMD = {top: 0, right: 0, bottom: 0, left: 0},
 		heightCMD = heightDays + heightPhase + 25, //I don't quite understand the sizing here
 		widthCMD = 400;
 
@@ -466,8 +495,8 @@ function startPlotting(){
 								top=(marginDays.top - marginDays.bottom), //I don't quite understand the position here
 								labelFontsize="18pt", 
 								axisFontsize="12pt",
-								xExtent = [-0.7644119, 5.7152615], 
-								yExtent=[18.828021451359326, -3.263948750885376],
+								xExtent = [-0.7644119, 4.715261459350586], 
+								yExtent=[16.3, -3.263948750885376],
 								hideAllTicks = true, 
 								backgroundImage = "data/CMDbackground.svg"); 
 
