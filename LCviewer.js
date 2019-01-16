@@ -164,7 +164,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("transform", "translate(" + left + "," + top + ")")
 
 	var image = null,
-		clip = null;
+		imageClip = null;
 	if (backgroundImage != null){
 		image = plot.append("image")
 			.attr("width", width)
@@ -173,10 +173,9 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			.attr("y", margin.top)
 			.attr('clip-path', null)
 			.attr("xlink:href", backgroundImage);
-		var clipPath = plot.append("clipPath")
-			.attr("id","clip");
-		clip = clipPath.append('rect');
-		console.log(image.node())
+		var imageClipPath = plot.append("clipPath")
+			.attr("id","imageClip");
+		imageClip = imageClipPath.append('rect');
 
 	}
 	//axes
@@ -268,8 +267,8 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			translate = getTransformation(null)
 
 		} else {
-			xScale.domain([xScale.invert(s[0][0]), xScale.invert(s[1][0])]).nice();
-			yScale.domain([yScale.invert(s[1][1]), yScale.invert(s[0][1])]).nice();
+			xScale.domain([xScale.invert(s[0][0]), xScale.invert(s[1][0])]);//.nice();
+			yScale.domain([yScale.invert(s[1][1]), yScale.invert(s[0][1])]);//.nice();
 			plot.select(".brush").call(brush.move, null);
 			if (backgroundImage != null){
 				translate = getTransformation(image.attr("transform"))
@@ -311,18 +310,23 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 		//the image
 		if (backgroundImage != null){
+			//distance from the edge
+			var dEdgeX = s[0][0] - translate.translateX;
+			var dEdgeY = s[0][1] - translate.translateY;
+
+			//new scaling
 			var sWidth = s[1][0] - s[0][0];
 			var sHeight = s[1][1] - s[0][1];
 			var scaleX = width/sWidth;
 			var scaleY = height/sHeight;
 
+			//multiply by old scaling for total scaling
 			var sX = scaleX*translate.scaleX;
 			var sY = scaleY*translate.scaleY;
-			var dx = (margin.left - s[0][0])*sX + translate.translateX;
-			var dy = (margin.top  - s[0][1])*sY + translate.translateY;
 
-
-			console.log(s, s[0][0], s[0][1],translate.translateX, translate.translateY, translate.scaleX, translate.scaleY, scaleX, scaleY, sX, sY, dx, dy)
+			//translation
+			var dx = margin.left - dEdgeX*scaleX ;
+			var dy = margin.top  - dEdgeY*scaleY ;
 
 			//now scale and translate the image
 			image.transition(t)
@@ -332,12 +336,12 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			plot.selectAll("circle").transition(t).attr("r",r0*sX);
 
 			// update clip attributes to reflect selection
-			// clip.attr("width", width)//sWidth)
+			// imageClip.attr("width", width)//sWidth)
 			// 	.attr("height", height)//sHeight)
 			// 	.attr("x",margin.left)//s[0][0])
 			// 	.attr("y",margin.right)//s[0][1])
 			// // apply clipping mask
-			// image.attr('clip-path', 'url(#clip)');
+			// image.attr('clip-path', 'url(#imageClip)');
 
 
 		}
@@ -445,8 +449,8 @@ function startPlotting(){
 	});
 
 	//dummy data for now
-	var foo = [{"x":5000,
-				"y":0,
+	var foo = [{"x":2,
+				"y":5,
 				"ye":1,
 				"circleColor":"black",
 				"errColor":"none"}];
@@ -462,10 +466,10 @@ function startPlotting(){
 								top=(marginDays.top - marginDays.bottom), //I don't quite understand the position here
 								labelFontsize="18pt", 
 								axisFontsize="12pt",
-								xExtent = [9000, 1000], 
-								yExtent=[5, -5],
+								xExtent = [-0.7644119, 5.7152615], 
+								yExtent=[18.828021451359326, -3.263948750885376],
 								hideAllTicks = true, 
-								backgroundImage = "data/tmpCMDbackground.png"); 
+								backgroundImage = "data/CMDbackground.svg"); 
 
 	var leftPos = (widthCMD + marginCMD.left + marginCMD.right + 40);
 	params.rawPlot = createPlot(params.rawData, 
