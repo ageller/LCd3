@@ -1,7 +1,7 @@
 body {
 	font: 10px sans-serif;
 	padding:20px;
-	touch-action: manipulate;
+	touch-action: manipulation;
 }
 
 .axis path,
