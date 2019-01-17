@@ -1,5 +1,5 @@
 //To Do : clip data outside of plots (https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb)
-
+//fix double tap on mobile (touch-action class not working)
 
 //the params object holds all "global" variables
 var params;
@@ -32,7 +32,18 @@ function defineParams(){
 }
 defineParams();
 
-
+//////////////
+//prevent the double-tap zoom on mobile 
+//https://medium.com/building-blocks/code-snippet-4accfa29b75d
+//////////////
+var doubleTouchStartTimestamp = 0;
+document.addEventListener("touchstart", function(event){
+	var now = +(new Date());
+	if (doubleTouchStartTimestamp + 500 > now){
+		event.preventDefault();
+	};
+	doubleTouchStartTimestamp = now;
+});
 
 //////////////
 // helper function since d3.v4 removed d3.transform
