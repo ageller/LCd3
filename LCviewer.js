@@ -32,18 +32,6 @@ function defineParams(){
 }
 defineParams();
 
-//////////////
-//prevent the double-tap zoom on mobile 
-//https://medium.com/building-blocks/code-snippet-4accfa29b75d
-//////////////
-var doubleTouchStartTimestamp = 0;
-document.addEventListener("touchstart", function(event){
-	var now = +(new Date());
-	if (doubleTouchStartTimestamp + 500 > now){
-		event.preventDefault();
-	};
-	doubleTouchStartTimestamp = now;
-});
 
 //////////////
 // helper function since d3.v4 removed d3.transform
@@ -169,7 +157,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 	xScale.domain(xExtent).nice();
 	yScale.domain(yExtent).nice();
 
-	var plot = d3.select("body").append("svg")
+	var plot = d3.select("#container").append("svg")
 		.attr('class',className)
 		.style('position', 'absolute')
 		.attr("width", (width + margin.left + margin.right))
@@ -558,7 +546,7 @@ function startPlotting(){
 
 	//create the buttons
 	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 80) + 'px'
-	var periodSelectDiv = d3.select("body").append("div")
+	var periodSelectDiv = d3.select("#container").append("div")
 		.attr('id','periodSelectDiv')
 		.attr('class','buttonsDiv')
 		.style('position','absolute')
@@ -581,7 +569,7 @@ function startPlotting(){
 
 	var bsize = periodSelectDiv.node().getBoundingClientRect();
 
-	var periodModDiv = d3.select("body").append("div")
+	var periodModDiv = d3.select("#container").append("div")
 		.attr('id','periodModDiv')
 		.attr('class','buttonsDiv')
 		.style('position','absolute')
