@@ -1,5 +1,3 @@
-//To Do : clip data outside of plots (https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb)
-//fix double tap on mobile (touch-action class not working)
 
 //the params object holds all "global" variables
 var params;
@@ -86,46 +84,41 @@ function getTransformation(transform) {
 //////////////
 function addData(data, plot, xScale, yScale, r=3.5){
 	// Add Error Line
-	plot.append("g").selectAll("line")
-		.data(data).enter()
-			.append("line")
-			.style("stroke", function(d) {return d.errColor;})
-			.attr("class", "error-line")
-			.attr("x1", function(d) {return xScale(+d.x);})
-			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x);})
-			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+	
+	var lines = plot.selectAll('.line').data(data).enter();
+	lines.append("line")
+		.style("stroke", function(d) {return d.errColor;})
+		.attr("class", "line error-line")
+		.attr("x1", function(d) {return xScale(+d.x);})
+		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
+		.attr("x2", function(d) {return xScale(+d.x);})
+		.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 
 	// Add Error Top Cap
-	plot.append("g").selectAll("line")
-		.data(data).enter()
-			.append("line")
-			.style("stroke", function(d) {return d.errColor;})
-			.attr("class", "error-cap error-cap-top")
-			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return yScale(+d.y + d.ye);});
+	lines.append("line")
+		.style("stroke", function(d) {return d.errColor;})
+		.attr("class", "line error-cap error-cap-top")
+		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
+		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
+		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
+		.attr("y2", function(d) {return yScale(+d.y + d.ye);});
 		
 	// Add Error Bottom Cap
-	plot.append("g").selectAll("line")
-		.data(data).enter()
-			.append("line")
-			.style("stroke", function(d) {return d.errColor;})
-			.attr("class", "error-cap error-cap-bottom")
-			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+	lines.append("line")
+		.style("stroke", function(d) {return d.errColor;})
+		.attr("class", "error-cap error-cap-bottom")
+		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
+		.attr("y1", function(d) {return yScale(+d.y - d.ye);})
+		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
+		.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 	
-	plot.append("g").selectAll("circle")
-		.data(data).enter()
-			.append("circle")
-			.style("fill", function(d) {return d.circleColor;})
-			.attr("class", "dot circle")
-			.attr("r", r)
-			.attr("cx", function(d) { return xScale(+d.x); })
-			.attr("cy", function(d) { return yScale(+d.y); })
+	var circles = plot.selectAll('.circle').data(data).enter();
+	circles.append("circle")
+		.style("fill", function(d) {return d.circleColor;})
+		.attr("class", "dot circle")
+		.attr("r", r)
+		.attr("cx", function(d) { return xScale(+d.x); })
+		.attr("cy", function(d) { return yScale(+d.y); })
 }
 
 //////////////
@@ -165,36 +158,27 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("transform", "translate(" + left + "," + top + ")")
 
 
-	// var clipPath = plot.append('defs').append("clipPath")
-	// 	.attr("id","clip");
-	// var clip = clipPath.append('rect')
-	// 	.attr("width", plot.attr("width"))
-	// 	.attr("height", plot.attr("height"))
-	// 	.attr("x",margin.left)
-	// 	.attr("y",margin.top);
+	//https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb
+	var clipPath = plot.append('defs').append("clipPath")
+		.attr("id","clip"+className);
+	var clip = clipPath.append('rect')
+		.attr("width", width)
+		.attr("height", height)
+		.attr("x",margin.left)
+		.attr("y",margin.top);
 
-	// const main = plot.append('g')
-	// 	.attr('class', 'main')
-	// 	//.attr('clip-path', 'url(#clip)');
+	const main = plot.append('g')
+		.attr('class', 'main')
+		.attr('clip-path', 'url(#clip'+className+')');
 
 	var image = null;
 	if (backgroundImage != null){
-		image = plot.append("image")
+		image = main.append("image")
 			.attr("width", width)
 			.attr("height", height)
 			.attr("x", margin.left)
 			.attr("y", margin.top)
 			.attr("xlink:href", backgroundImage);
-
-		var imageClipPath = plot.append('defs').append("clipPath")
-			.attr("id","imageClip");
-		var imageClip = imageClipPath.append('rect')
-			.attr("width", plot.attr("width"))
-			.attr("height", plot.attr("height"))
-			.attr("x",margin.left)
-			.attr("y",margin.top);
-		image.attr('clip-path', 'url(#imageClip)')
-
 	}
 
 	//axes
@@ -262,7 +246,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 	//add the data (from external function)
-	addData(data, plot, xScale, yScale, r=r0);
+	addData(data, main, xScale, yScale, r=r0);
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
@@ -353,32 +337,6 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			//translation
 			var dx = margin.left - dEdgeX*scaleX ;
 			var dy = margin.top  - dEdgeY*scaleY ;
-
-			////////// clipping
-			// update clip attributes to reflect selection
-			var cw = sWidth/translate.scaleX;
-			var ch = sHeight/translate.scaleY;
-			var x0 = 0;
-			var y0 = 0;
-
-			//account for previous translation and scale
-			if (translate.translateX != 0){
-				x0 = parseFloat(imageClip.attr("x")) - margin.left/translate.scaleX;
-				y0 = parseFloat(imageClip.attr("y")) - margin.top/translate.scaleY;
-			}
-			var cx = x0 + s[0][0]/translate.scaleX;
-			var cy = y0 + s[0][1]/translate.scaleY;
-
-			//transition duration
-			var tC = params.tDuration/10.;
-			if (sX == 1 && sY == 1){
-				tC = params.tDuration*2.;
-			}
-			imageClip.transition().duration(tC)
-				.attr("width", cw)
-				.attr("height", ch)
-				.attr("x",cx)
-				.attr("y",cy);
 
 			//now scale and translate the image
 			image.transition(t)
