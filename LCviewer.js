@@ -32,6 +32,8 @@ function defineParams(){
 }
 defineParams();
 
+
+
 //////////////
 // helper function since d3.v4 removed d3.transform
 // https://stackoverflow.com/questions/38224875/replacing-d3-transform-in-d3-v4
@@ -163,26 +165,39 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr("height", (height + margin.top + margin.bottom))
 		.attr("transform", "translate(" + left + "," + top + ")")
 
-	var image = null,
-		imageClip = null;
+
+	// var clipPath = plot.append('defs').append("clipPath")
+	// 	.attr("id","clip");
+	// var clip = clipPath.append('rect')
+	// 	.attr("width", plot.attr("width"))
+	// 	.attr("height", plot.attr("height"))
+	// 	.attr("x",margin.left)
+	// 	.attr("y",margin.top);
+
+	// const main = plot.append('g')
+	// 	.attr('class', 'main')
+	// 	//.attr('clip-path', 'url(#clip)');
+
+	var image = null;
 	if (backgroundImage != null){
 		image = plot.append("image")
 			.attr("width", width)
 			.attr("height", height)
 			.attr("x", margin.left)
 			.attr("y", margin.top)
-			.attr('clip-path', null)
 			.attr("xlink:href", backgroundImage);
-		var imageClipPath = plot.append("clipPath")
+
+		var imageClipPath = plot.append('defs').append("clipPath")
 			.attr("id","imageClip");
-		imageClip = imageClipPath.append('rect')
-			.attr("width", width)
-			.attr("height", height)
+		var imageClip = imageClipPath.append('rect')
+			.attr("width", plot.attr("width"))
+			.attr("height", plot.attr("height"))
 			.attr("x",margin.left)
-			.attr("y",margin.right);
+			.attr("y",margin.top);
 		image.attr('clip-path', 'url(#imageClip)')
 
 	}
+
 	//axes
 	var gXbottom = plot.append("g")
 		.attr("class", "axis axis-x-bottom")
@@ -317,16 +332,18 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 
+
+
 		//the image
 		if (backgroundImage != null){
+			var sWidth = s[1][0] - s[0][0];
+			var sHeight = s[1][1] - s[0][1];
 
 			//distance from the edge
 			var dEdgeX = s[0][0] - translate.translateX;
 			var dEdgeY = s[0][1] - translate.translateY;
 
 			//new scaling
-			var sWidth = s[1][0] - s[0][0];
-			var sHeight = s[1][1] - s[0][1];
 			var scaleX = width/sWidth;
 			var scaleY = height/sHeight;
 
@@ -338,6 +355,7 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			var dx = margin.left - dEdgeX*scaleX ;
 			var dy = margin.top  - dEdgeY*scaleY ;
 
+			////////// clipping
 			// update clip attributes to reflect selection
 			var cw = sWidth/translate.scaleX;
 			var ch = sHeight/translate.scaleY;
