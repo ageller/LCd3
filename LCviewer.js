@@ -1,3 +1,7 @@
+//see the look here, and match it? https://github.com/zooniverse/front-end-monorepo/pull/376
+
+//could use a full screen button?
+//also a help button (?)
 
 //the params object holds all "global" variables
 var params;
@@ -121,17 +125,17 @@ function addData(data, plot, xScale, yScale, r=3.5){
 		.attr("cy", function(d) { return yScale(+d.y); })
 }
 
+
 //////////////
-// setup the plot
+// create the plot axes
 //////////////
-function createPlot(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false, backgroundImage = null){
+function createAxes(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
 	var xScale = d3.scaleLinear().range(x0),
 		yScale = d3.scaleLinear().range(y0);
 
-	var r0 = 3.5; //circle radius
 
 	var xAxisBottom = d3.axisBottom(xScale),
 		xAxisTop = d3.axisTop(xScale),
@@ -171,15 +175,6 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.attr('class', 'main')
 		.attr('clip-path', 'url(#clip'+className+')');
 
-	var image = null;
-	if (backgroundImage != null){
-		image = main.append("image")
-			.attr("width", width)
-			.attr("height", height)
-			.attr("x", margin.left)
-			.attr("y", margin.top)
-			.attr("xlink:href", backgroundImage);
-	}
 
 	//axes
 	var gXbottom = plot.append("g")
@@ -244,13 +239,50 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		.style("font-size", labelFontsize)
 		.html(yTitle)
 
+	return {"plot":plot,
+			"xScale":xScale,
+			"yScale":yScale, 
+			"xAxisBottom":xAxisBottom,
+			"xAxisTop":xAxisTop,
+			"yAxisLeft":yAxisLeft,
+			"yAxisRight":yAxisRight,
+			"xExtent":xExtent,
+			"yExtent":yExtent};
+
+}
+
+//////////////
+// setup the plot
+//////////////
+function createScatterPlot(plotObj, data, backgroundImage = null){
+
+
+	var main = plotObj.plot.select(".main"),
+		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+
+	var	width = parseFloat(rect.attr("width")),
+		height = parseFloat(rect.attr("height")),
+		left = parseFloat(rect.attr("x")),
+		top = parseFloat(rect.attr("y"));
+
+	var image = null;
+	if (backgroundImage != null){
+		image = main.append("image")
+			.attr("width", width)
+			.attr("height", height)
+			.attr("x", left)
+			.attr("y", top)
+			.attr("xlink:href", backgroundImage);
+	}
+
 
 	//add the data (from external function)
-	addData(data, main, xScale, yScale, r=r0);
+	var r0 = 3.5; //circle radius
+	addData(data, main, plotObj.xScale, plotObj.yScale, r=r0);
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
-	plot.append("g")
+	plotObj.plot.append("g")
 		.attr("class", "brush")
 		.call(brush);
 
@@ -262,16 +294,16 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 		var translate = getTransformation(null)
 		if (!s) {
 			if (!params.idleTimeout) return params.idleTimeout = setTimeout(idled, params.idleDelay);
-			xScale.domain(xExtent).nice();
-			yScale.domain(yExtent).nice();
-			s = [[margin.left, margin.top],
-				[plot.attr('width') - margin.right, plot.attr('height') - margin.bottom]];
+			plotObj.xScale.domain(plotObj.xExtent).nice();
+			plotObj.yScale.domain(plotObj.yExtent).nice();
+			s = [[left, top],
+				[width + left, height + top]];
 			translate = getTransformation(null)
 
 		} else {
-			xScale.domain([xScale.invert(s[0][0]), xScale.invert(s[1][0])]);//.nice();
-			yScale.domain([yScale.invert(s[1][1]), yScale.invert(s[0][1])]);//.nice();
-			plot.select(".brush").call(brush.move, null);
+			plotObj.xScale.domain([plotObj.xScale.invert(s[0][0]), plotObj.xScale.invert(s[1][0])]);//.nice();
+			plotObj.yScale.domain([plotObj.yScale.invert(s[1][1]), plotObj.yScale.invert(s[0][1])]);//.nice();
+			plotObj.plot.select(".brush").call(brush.move, null);
 			if (backgroundImage != null){
 				var trans = image.attr("transform");
 				if (trans == ""){
@@ -290,30 +322,30 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 	function zoom(s, translate) {
 
-		var t = plot.transition().duration(params.tDuration);
+		var t = plotObj.plot.transition().duration(params.tDuration);
 		//the points
-		plot.select(".axis-x-top").transition(t).call(xAxisTop);
-		plot.select(".axis-x-bottom").transition(t).call(xAxisBottom);
-		plot.select(".axis-y-left").transition(t).call(yAxisLeft);
-		plot.select(".axis-y-right").transition(t).call(yAxisRight);
-		plot.selectAll("circle").transition(t)
-			.attr("cx", function(d) {return xScale(+d.x); })
-			.attr("cy", function(d) {return yScale(+d.y); });
-		plot.selectAll(".error-line").transition(t)
-			.attr("x1", function(d) {return xScale(+d.x);})
-			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x);})
-			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
-		plot.selectAll(".error-cap-top").transition(t)
-			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return yScale(+d.y + d.ye);});
-		plot.selectAll(".error-cap-bottom").transition(t)
-			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
-			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+		plotObj.plot.select(".axis-x-top").transition(t).call(plotObj.xAxisTop);
+		plotObj.plot.select(".axis-x-bottom").transition(t).call(plotObj.xAxisBottom);
+		plotObj.plot.select(".axis-y-left").transition(t).call(plotObj.yAxisLeft);
+		plotObj.plot.select(".axis-y-right").transition(t).call(plotObj.yAxisRight);
+		plotObj.plot.selectAll("circle").transition(t)
+			.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+			.attr("cy", function(d) {return plotObj.yScale(+d.y); });
+		plotObj.plot.selectAll(".error-line").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x);})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x);})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+		plotObj.plot.selectAll(".error-cap-top").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y + d.ye);});
+		plotObj.plot.selectAll(".error-cap-bottom").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y - d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
 
 
 
@@ -335,15 +367,15 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 			var sY = scaleY*translate.scaleY;
 
 			//translation
-			var dx = margin.left - dEdgeX*scaleX ;
-			var dy = margin.top  - dEdgeY*scaleY ;
+			var dx = left - dEdgeX*scaleX ;
+			var dy = top  - dEdgeY*scaleY ;
 
 			//now scale and translate the image
 			image.transition(t)
 				.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
 
 			//increase the size of the circle
-			plot.selectAll("circle").transition(t).attr("r",r0*sX);
+			plotObj.plot.selectAll("circle").transition(t).attr("r",r0*sX);
 
 	
 
@@ -352,9 +384,6 @@ function createPlot(data, width, height, margin, xTitle, yTitle, className, topX
 
 	}
 
-	return {"plot":plot,
-			"xScale":xScale,
-			"yScale":yScale};
 }
 
 //////////////
@@ -425,9 +454,12 @@ function startPlotting(){
 		heightPhase = 300,
 		widthPhase = widthDays, 
 		marginCMD = {top: 5, right: 5, bottom: 65, left: 65},
-		//marginCMD = {top: 0, right: 0, bottom: 0, left: 0},
 		heightCMD = heightDays + heightPhase + 25, //I don't quite understand the sizing here
 		widthCMD = 400;
+		marginPeriod = {top: 5, right: 5, bottom: 65, left: 65},
+		heightPeriod = 25, 
+		widthPeriod = 400;
+
 
 	var period = params.inputData[params.inputData.filters[params.ppos]].period;
 
@@ -458,7 +490,7 @@ function startPlotting(){
 				"ye":1,
 				"circleColor":"black",
 				"errColor":"none"}];
-	params.CMDPlot = createPlot(foo, 
+	params.CMDPlot = createAxes(foo, 
 								widthCMD, 
 								heightCMD, 
 								marginCMD, 
@@ -472,15 +504,15 @@ function startPlotting(){
 								axisFontsize="12pt",
 								xExtent = [-0.7644119, 4.715261459350586], 
 								yExtent=[16.3, -3.263948750885376],
-								hideAllTicks = true, 
-								backgroundImage = "data/CMDbackground.svg"); 
+								hideAllTicks = true);								 
+	createScatterPlot(params.CMDPlot, foo, backgroundImage = "data/CMDbackground.svg");
 
 	var leftPos = (widthCMD + marginCMD.left + marginCMD.right + 40);
-	params.rawPlot = createPlot(params.rawData, 
+	params.rawPlot = createAxes(params.rawData, 
 								widthDays, 
 								heightDays, 
 								marginDays, 
-								"Time (d)", 
+								"Time (days)", 
 								"Brightness&rarr;", 
 								"rawPlot", 
 								topXlabel=true, 
@@ -488,8 +520,9 @@ function startPlotting(){
 								top=0, 
 								labelFontsize="12pt", 
 								axisFontsize="10pt");
+	createScatterPlot(params.rawPlot, params.rawData);
 
-	params.phasePlot = createPlot(params.phaseData, 
+	params.phasePlot = createAxes(params.phaseData, 
 								widthPhase, 
 								heightPhase, 
 								marginPhase, 
@@ -499,6 +532,7 @@ function startPlotting(){
 								topXlabel=false, 
 								left=leftPos, 
 								top=(heightDays + marginPhase.bottom + marginPhase.top));
+	createScatterPlot(params.phasePlot, params.phaseData);
 
 
 
