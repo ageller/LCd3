@@ -19,11 +19,15 @@ function defineParams(){
 		//will store reformatted data (somewhat wasteful!)
 		this.rawData = [];
 		this.phaseData = [];
+		this.periodData = [];
+		this.amplitudeData = [];
 
 		//will store plots
 		this.rawPlot;
 		this.phasePlot;
 		this.CMDPlot;
+		this.periodPlot;
+		this.amplitudePlot;
 
 		this.ppos = 0; //which filter to use to define the period (for inputData.filters)
 		this.mpos = 0; //which multiple to use (for inputData.multiples)
@@ -129,12 +133,13 @@ function addData(data, plot, xScale, yScale, r=3.5){
 //////////////
 // create the plot axes
 //////////////
-function createAxes(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false){
+function createAxes(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, rightYlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false, xFormat=d3.scaleLinear(), yFormat=d3.scaleLinear(), nXticks = 5, nYticks = 5){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
-	var xScale = d3.scaleLinear().range(x0),
-		yScale = d3.scaleLinear().range(y0);
+
+	var xScale = xFormat.range(x0),
+		yScale = yFormat.range(y0);
 
 
 	var xAxisBottom = d3.axisBottom(xScale),
@@ -149,7 +154,6 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	if (yExtent == null){
 		yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
 	}
-
 
 	xScale.domain(xExtent).nice();
 	yScale.domain(yExtent).nice();
@@ -193,8 +197,8 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 		.style("font-size", axisFontsize)
 		.call(yAxisLeft)
 	var gYright = plot.append("g")
-		.attr("transform", "translate(" + (width + margin.left) + ",0)")
-		.attr("class", "axis axis-y-right axis-blank")
+		.attr("transform", "translate(" + (width + margin.left+1) + ",0)scale(-1,1)") //scale to keep ticks on outside of plot, but not sure why I need +1 in translate
+		.attr("class", "axis axis-y-right")
 		.style("font-size", axisFontsize)
 		.call(yAxisRight)
 
@@ -204,10 +208,16 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	} else{
 		gXtop.classed('axis-blank', true);
 	}
-	gYleft.call(yAxisLeft.ticks(5));
-	gYright.call(yAxisRight.ticks(5));
-	gXtop.call(xAxisTop.ticks(5));
-	gXbottom.call(xAxisBottom.ticks(5));
+	if (rightYlabel){
+		gYleft.classed('axis-blank', true);
+	} else{
+		gYright.classed('axis-blank', true);
+	}
+
+	gYleft.call(yAxisLeft.ticks(nYticks));
+	gYright.call(yAxisRight.ticks(nYticks));
+	gXtop.call(xAxisTop.ticks(nXticks));
+	gXbottom.call(xAxisBottom.ticks(nXticks));
 
 	if (hideAllTicks){
 		gXbottom.classed('axis-blank', true);
@@ -217,24 +227,30 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	}
 
 	//axes labels
-	var yoffset = height + margin.bottom - 20,
-		xoffset = -height/2.
+	var xXoffset = width/2. + margin.left;
+		xYoffset = height + margin.bottom - 20
+		yXoffset = -height/2.,
+		yYoffset = 20;
+
 	if (topXlabel){
-		yoffset = 20;
-		xoffset = -height;
+		xYoffset = 20;
+		yXoffset = -height; //not sure why this is needed
+	}
+	if (rightYlabel){
+		yYoffset = width + margin.left + 30;
 	}
 	plot.append("text")
 		.attr("class", "label")
-		.attr("x", width/2. + margin.left)
-		.attr("y", yoffset)
+		.attr("x", xXoffset)
+		.attr("y", xYoffset)
 		.style("text-anchor", "middle")
 		.style("font-size", labelFontsize)
 		.html(xTitle);
 	plot.append("text")
 		.attr("class", "label")
 		.attr("transform", "rotate(-90)")
-		.attr("x", xoffset)
-		.attr("y", 20)
+		.attr("x", yXoffset)
+		.attr("y", yYoffset)
 		.style("text-anchor", "middle")
 		.style("font-size", labelFontsize)
 		.html(yTitle)
@@ -247,12 +263,17 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 			"yAxisLeft":yAxisLeft,
 			"yAxisRight":yAxisRight,
 			"xExtent":xExtent,
-			"yExtent":yExtent};
+			"yExtent":yExtent, 
+			"gXtop":gXtop,
+			"gXbottom":gXbottom,
+			"gYright":gYright,
+			"gYleft":gYleft};
 
 }
 
+
 //////////////
-// setup the plot
+// create the scatter plot, with possibility of background image
 //////////////
 function createScatterPlot(plotObj, data, backgroundImage = null){
 
@@ -387,6 +408,37 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 }
 
 //////////////
+// create the bar plot (for period and amplitude spines)
+//////////////
+function createBarPlot(plotObj, data, horizontal = false){
+
+	var main = plotObj.plot.select(".main"),
+		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+
+	var	width = parseFloat(rect.attr("width")),
+		height = parseFloat(rect.attr("height")),
+		left = parseFloat(rect.attr("x")),
+		top = parseFloat(rect.attr("y"));
+
+	var bar = main.selectAll("bar").data(data).enter();
+	if (horizontal){
+		bar.append("rect")
+			.style("fill", function(d) {return d.color})
+			.attr("x", left)
+			.attr("width", function(d) { return plotObj.xScale(+d.y) - left;})
+			.attr("y", function(d, i) {return height/data.length*i + top; }) 
+			.attr("height",  height/data.length*0.8);
+	} else {
+		bar.append("rect")
+			.style("fill", function(d) {return d.color})
+			.attr("x", function(d, i) {return width/data.length*i + left; })
+			.attr("width", width/data.length*0.8)
+			.attr("y", function(d) { return (plotObj.yScale(+d.y));}) 
+			.attr("height", function(d) { return height + top - plotObj.yScale(+d.y);})
+	}
+}
+
+//////////////
 // updates to the buttons
 //////////////
 function updateButtons(){
@@ -458,15 +510,29 @@ function startPlotting(){
 		widthCMD = 400;
 		marginPeriod = {top: 5, right: 5, bottom: 65, left: 65},
 		heightPeriod = 25, 
-		widthPeriod = 400;
-
+		widthPeriod = widthDays
+		marginAmplitude = {top: 5, right: 65, bottom: 5, left: 5},
+		heightAmplitude = heightPhase, 
+		widthAmplitude = 25;
 
 	var period = params.inputData[params.inputData.filters[params.ppos]].period;
 
+
 	params.inputData.filters.forEach(function(filter, j){
 
-		//reformat the data -- easier for plotting
+		params.periodData.push({"x":j, 
+				"y":parseFloat(params.inputData[filter].period),
+				"ye":0.,
+				"color":params.inputData[filter].color
+			});
 
+		params.amplitudeData.push({"x":j, 
+				"y":parseFloat(params.inputData[filter].amplitude),
+				"ye":0.,
+				"color":params.inputData[filter].color
+			});
+
+		//reformat the data -- easier for plotting
 		params.inputData[filter].obsmjd.forEach(function(d, i){
 			params.rawData.push({"x":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
@@ -498,6 +564,7 @@ function startPlotting(){
 								"Brightness&rarr;", 
 								"CMDPlot", 
 								topXlabel=false, 
+								rightYlabel=false, 
 								left=0,
 								top=(marginDays.top - marginDays.bottom), //I don't quite understand the position here
 								labelFontsize="18pt", 
@@ -516,6 +583,7 @@ function startPlotting(){
 								"Brightness&rarr;", 
 								"rawPlot", 
 								topXlabel=true, 
+								rightYlabel=false, 
 								left=leftPos, 
 								top=0, 
 								labelFontsize="12pt", 
@@ -530,14 +598,65 @@ function startPlotting(){
 								"Brightness&rarr;", 
 								"phasePlot", 
 								topXlabel=false, 
+								rightYlabel=false, 
 								left=leftPos, 
 								top=(heightDays + marginPhase.bottom + marginPhase.top));
 	createScatterPlot(params.phasePlot, params.phaseData);
 
+	params.periodPlot = createAxes(params.periodData, 
+								widthPeriod, 
+								heightPeriod, 
+								marginPeriod, 
+								"Period&rarr;", 
+								"", 
+								"periodPlot", 
+								topXlabel=false, 
+								rightYlabel=false, 
+								left=leftPos,
+								top=(heightDays + heightPhase + marginPhase.bottom + marginPhase.top + marginDays.bottom + marginDays.top), 
+								labelFontsize="12pt", 
+								axisFontsize="10pt",
+								xExtent = [0.1, 1000], 
+								yExtent = [0,params.periodData.length],
+								hideAllTicks = true,
+								xFormat = d3.scaleLog().base(10),
+								yFormat = d3.scaleLinear(),
+								nXticks = 4);					
+	createBarPlot(params.periodPlot, params.periodData, horizontal = true);
+	//hide some axes
+	params.periodPlot.gXtop.classed("hidden",true)
+	params.periodPlot.gYleft.classed("hidden",true)
+	params.periodPlot.gYright.classed("hidden",true)
 
+	params.amplitudePlot = createAxes(params.amplitudeData, 
+								widthAmplitude, 
+								heightAmplitude, 
+								marginAmplitude, 
+								"", 
+								"Amplitude&rarr;", 
+								"amplitudePlot", 
+								topXlabel=false, 
+								rightYlabel=true, 
+								left=leftPos + widthPhase + marginPhase.left + marginPhase.right,
+								top=(heightDays + marginPhase.bottom + marginPhase.top), 
+								labelFontsize="12pt", 
+								axisFontsize="10pt",
+								xExtent = [0,params.amplitudeData.length], 
+								yExtent = [0.01, 10],
+								hideAllTicks = true,
+								xFormat = d3.scaleLinear(),
+								yFormat = d3.scaleLog().base(10),
+								nXticks = 1,
+								nYticks = 3);					
+	createBarPlot(params.amplitudePlot, params.amplitudeData);
+	//hide some axes
+	params.amplitudePlot.gXtop.classed("hidden",true)
+	params.amplitudePlot.gXbottom.classed("hidden",true)
+	params.amplitudePlot.gYleft.classed("hidden",true)
+	//console.log(params.amplitudePlot.gYright.selectAll('.tick').selectAll('line').attr("x2", 6))
 
 	//create the buttons
-	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 80) + 'px'
+	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 150) + 'px'
 	var periodSelectDiv = d3.select("#container").append("div")
 		.attr('id','periodSelectDiv')
 		.attr('class','buttonsDiv')
