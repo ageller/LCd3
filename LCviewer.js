@@ -96,7 +96,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 	var lines = plot.selectAll('.line').data(data).enter();
 	lines.append("line")
 		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", "line error-line")
+		.attr("class", function(d) {return "line error-line "+d.filter})
 		.attr("x1", function(d) {return xScale(+d.x);})
 		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
 		.attr("x2", function(d) {return xScale(+d.x);})
@@ -105,7 +105,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 	// Add Error Top Cap
 	lines.append("line")
 		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", "line error-cap error-cap-top")
+		.attr("class", function(d) {return "line error-cap error-cap-top "+d.filter})
 		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
 		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
@@ -114,7 +114,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 	// Add Error Bottom Cap
 	lines.append("line")
 		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", "error-cap error-cap-bottom")
+		.attr("class", function(d) {return "error-cap error-cap-bottom "+d.filter})
 		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 		.attr("y1", function(d) {return yScale(+d.y - d.ye);})
 		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
@@ -123,7 +123,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 	var circles = plot.selectAll('.circle').data(data).enter();
 	circles.append("circle")
 		.style("fill", function(d) {return d.circleColor;})
-		.attr("class", "dot circle")
+		.attr("class", function(d) {return "dot circle "+d.filter})
 		.attr("r", r)
 		.attr("cx", function(d) { return xScale(+d.x); })
 		.attr("cy", function(d) { return yScale(+d.y); })
@@ -415,27 +415,31 @@ function createBarPlot(plotObj, data, horizontal = false){
 	var main = plotObj.plot.select(".main"),
 		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
 
+	//disable clipping
+	main.attr("clip-path",null);
+
 	var	width = parseFloat(rect.attr("width")),
 		height = parseFloat(rect.attr("height")),
 		left = parseFloat(rect.attr("x")),
 		top = parseFloat(rect.attr("y"));
 
-	var bar = main.selectAll("bar").data(data).enter();
+	var bar = main.selectAll("bar").data(data).enter().append("rect");
+	bar.style("fill", function(d) {return d.color})
+		.attr("class",function(d) {return "bar-rect "+d.filter})
+		.attr("rx",4)
+		.attr("ry",4);
 	if (horizontal){
-		bar.append("rect")
-			.style("fill", function(d) {return d.color})
-			.attr("x", left)
+		bar.attr("x", left)
 			.attr("width", function(d) { return plotObj.xScale(+d.y) - left;})
 			.attr("y", function(d, i) {return height/data.length*i + top; }) 
 			.attr("height",  height/data.length*0.8);
 	} else {
-		bar.append("rect")
-			.style("fill", function(d) {return d.color})
-			.attr("x", function(d, i) {return width/data.length*i + left; })
+		bar.attr("x", function(d, i) {return width/data.length*i + left; })
 			.attr("width", width/data.length*0.8)
 			.attr("y", function(d) { return (plotObj.yScale(+d.y));}) 
 			.attr("height", function(d) { return height + top - plotObj.yScale(+d.y);})
 	}
+
 }
 
 //////////////
@@ -459,6 +463,24 @@ function updateButtons(){
 	b.style('background-color',params.inputData[params.inputData.filters[params.ppos]].color);
 	b.classed('clicked', true);
 
+	//outlines on the bars
+	params.inputData.filters.forEach(function(filter, j){
+		params.periodPlot.plot.selectAll("."+filter).classed("barSelected", false);
+		params.amplitudePlot.plot.selectAll("."+filter).classed("barSelected", false);
+	});
+
+	//outlines on rects
+	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+
+	//length of period rects
+	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.inputData.multiples[params.mpos],
+		left = parseFloat(params.periodPlot.plot.select("defs").select("clipPath").select("rect").attr("x"));
+
+	//console.log(period, params.periodPlot.xScale(+period))
+	var t = params.periodPlot.plot.transition().duration(params.tDuration);			
+	params.periodPlot.plot.selectAll(".bar-rect").transition(t)
+		.attr("width", function(d) {return params.periodPlot.xScale(+d.y*params.inputData.multiples[params.mpos]) - left;}) ;
 
 }
 
@@ -509,11 +531,11 @@ function startPlotting(){
 		heightCMD = heightDays + heightPhase + 25, //I don't quite understand the sizing here
 		widthCMD = 400;
 		marginPeriod = {top: 5, right: 5, bottom: 65, left: 65},
-		heightPeriod = 25, 
+		heightPeriod = 50, 
 		widthPeriod = widthDays
 		marginAmplitude = {top: 5, right: 65, bottom: 5, left: 5},
 		heightAmplitude = heightPhase, 
-		widthAmplitude = 25;
+		widthAmplitude = 50;
 
 	var period = params.inputData[params.inputData.filters[params.ppos]].period;
 
@@ -523,13 +545,15 @@ function startPlotting(){
 		params.periodData.push({"x":j, 
 				"y":parseFloat(params.inputData[filter].period),
 				"ye":0.,
-				"color":params.inputData[filter].color
+				"color":params.inputData[filter].color,
+				"filter":filter
 			});
 
 		params.amplitudeData.push({"x":j, 
 				"y":parseFloat(params.inputData[filter].amplitude),
 				"ye":0.,
-				"color":params.inputData[filter].color
+				"color":params.inputData[filter].color,
+				"filter":filter
 			});
 
 		//reformat the data -- easier for plotting
@@ -538,13 +562,15 @@ function startPlotting(){
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),  
 				"circleColor":params.inputData[filter].color, 
-				"errColor":params.inputData[filter].color
+				"errColor":params.inputData[filter].color,
+				"filter":filter
 			});
 			params.phaseData.push({"x":(parseFloat(params.inputData[filter].obsmjd[i]) % period)/period, 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
 				"circleColor":params.inputData[filter].color, 
-				"errColor":params.inputData[filter].color
+				"errColor":params.inputData[filter].color,
+				"filter":filter
 			});
 		})
 
@@ -655,8 +681,12 @@ function startPlotting(){
 	params.amplitudePlot.gYleft.classed("hidden",true)
 	//console.log(params.amplitudePlot.gYright.selectAll('.tick').selectAll('line').attr("x2", 6))
 
+	//initial outlines on the bars
+	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+
 	//create the buttons
-	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 150) + 'px'
+	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 200) + 'px'
 	var periodSelectDiv = d3.select("#container").append("div")
 		.attr('id','periodSelectDiv')
 		.attr('class','buttonsDiv')
