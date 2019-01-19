@@ -68,6 +68,10 @@ body {
 	border: 4px solid black;
 }
 
+.bar-rect{
+	cursor:pointer;
+
+}
 .barSelected{
 	stroke: black;
 	stroke-width: 4px;

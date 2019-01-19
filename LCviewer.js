@@ -685,6 +685,23 @@ function startPlotting(){
 	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 
+
+	//select the period from the rect
+	params.inputData.filters.forEach(function(filt, j){
+		params.periodPlot.plot.selectAll("."+filt)
+			.on('click',function(d){
+				params.ppos = j;
+				updateButtons();
+				updatePhasePlot();
+			});
+		params.amplitudePlot.plot.selectAll("."+filt)
+			.on('click',function(d){
+				params.ppos = j;
+				updateButtons();
+				updatePhasePlot();
+			});
+	});
+
 	//create the buttons
 	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 200) + 'px'
 	var periodSelectDiv = d3.select("#container").append("div")
