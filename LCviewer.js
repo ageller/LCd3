@@ -2,6 +2,7 @@
 
 //could use a full screen button?
 //also a help button (?)
+//need to fix input box to update after enter and then selection
 
 //the params object holds all "global" variables
 var params;
@@ -29,8 +30,48 @@ function defineParams(){
 		this.periodPlot;
 		this.amplitudePlot;
 
+		this.period;
+		this.periodMultiple = 1.;
+
 		this.ppos = 0; //which filter to use to define the period (for inputData.filters)
 		this.mpos = 0; //which multiple to use (for inputData.multiples)
+
+
+	//positions for all the plots
+	this.plotPositions = {};
+	var width = 500,
+		topPos = 100,
+		leftPos = 100;
+
+	this.plotPositions.marginPhase = {top: 50, right: 5, bottom: 65, left: 65}; //adding to the bottom so that I can shift the y label
+	this.plotPositions.heightPhase = 300;
+	this.plotPositions.widthPhase = width;
+	this.plotPositions.leftPhase = leftPos;
+	this.plotPositions.topPhase = topPos;
+
+	this.plotPositions.marginDays = {top: 5, right: 5, bottom: 65, left: 65};
+	this.plotPositions.heightDays = 100;
+	this.plotPositions.widthDays = width;
+	this.plotPositions.leftDays = leftPos;
+	this.plotPositions.topDays = topPos + this.plotPositions.heightPhase + this.plotPositions.marginPhase.top + 5; //5 is the desired marginPhase.bottom
+
+	this.plotPositions.marginCMD = {top: 50, right: 5, bottom: 65, left: 5};
+	this.plotPositions.heightCMD = this.plotPositions.heightDays + this.plotPositions.heightPhase  + this.plotPositions.marginDays.top + 5; //5 is the desired marginPhase.bottom
+	this.plotPositions.widthCMD = this.plotPositions.heightPhase;
+	this.plotPositions.leftCMD = leftPos + width + this.plotPositions.marginPhase.left + this.plotPositions.marginPhase.right;
+	this.plotPositions.topCMD = topPos;
+
+	this.plotPositions.marginPeriod = {top: 30, right: 5, bottom: 15, left: 65};
+	this.plotPositions.heightPeriod = topPos - this.plotPositions.marginPeriod.top - this.plotPositions.marginPeriod.bottom; 
+	this.plotPositions.widthPeriod = this.plotPositions.widthDays;
+	this.plotPositions.leftPeriod = leftPos;
+	this.plotPositions.topPeriod = 0;
+
+	this.plotPositions.marginAmplitude = {top: 50, right: 15, bottom: 65, left: 30};
+	this.plotPositions.heightAmplitude = this.plotPositions.heightCMD;
+	this.plotPositions.widthAmplitude = leftPos - this.plotPositions.marginAmplitude.left - this.plotPositions.marginAmplitude.right;
+	this.plotPositions.leftAmplitude = 0;
+	this.plotPositions.topAmplitude = this.plotPositions.topPhase;
 
 	}
 	params = new ParamsInit();
@@ -114,7 +155,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 	// Add Error Bottom Cap
 	lines.append("line")
 		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", function(d) {return "error-cap error-cap-bottom "+d.filter})
+		.attr("class", function(d) {return "line error-cap error-cap-bottom "+d.filter})
 		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 		.attr("y1", function(d) {return yScale(+d.y - d.ye);})
 		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
@@ -133,7 +174,7 @@ function addData(data, plot, xScale, yScale, r=3.5){
 //////////////
 // create the plot axes
 //////////////
-function createAxes(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, rightYlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="12pt", xExtent = null, yExtent = null, hideAllTicks = false, xFormat=d3.scaleLinear(), yFormat=d3.scaleLinear(), nXticks = 5, nYticks = 5){
+function createAxes(data, width, height, margin, xTitle, yTitle, className, topXlabel=false, rightYlabel=false, left=0, top=0, labelFontsize="18pt", axisFontsize="10pt", xExtent = null, yExtent = null, hideAllTicks = false, xFormat=d3.scaleLinear(), yFormat=d3.scaleLinear(), nXticks = 5, nYticks = 5){
 
 	var x0 = [margin.left, width + margin.left ],
 		y0 = [height + margin.top, margin.top];
@@ -142,10 +183,12 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 		yScale = yFormat.range(y0);
 
 
+	//for style, I want the ticks inside, but the labels outside.  
+	//I will reposition ticks and text later
 	var xAxisBottom = d3.axisBottom(xScale),
 		xAxisTop = d3.axisTop(xScale),
 		yAxisLeft = d3.axisLeft(yScale),
-		yAxisRight = d3.axisLeft(yScale);
+		yAxisRight = d3.axisRight(yScale);
 
 
 	if (xExtent == null) {
@@ -197,12 +240,34 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 		.style("font-size", axisFontsize)
 		.call(yAxisLeft)
 	var gYright = plot.append("g")
-		.attr("transform", "translate(" + (width + margin.left+1) + ",0)scale(-1,1)") //scale to keep ticks on outside of plot, but not sure why I need +1 in translate
+		.attr("transform", "translate(" + (width + margin.left) + ",0)") 
 		.attr("class", "axis axis-y-right")
 		.style("font-size", axisFontsize)
 		.call(yAxisRight)
 
+	gYleft.call(yAxisLeft.ticks(nYticks));
+	gYright.call(yAxisRight.ticks(nYticks));
+	gXtop.call(xAxisTop.ticks(nXticks));
+	gXbottom.call(xAxisBottom.ticks(nXticks));
+
 	//cleanup ticks
+	//flip them
+	var y2 = parseFloat(gXtop.selectAll('.tick').selectAll('line').attr("y2"));
+	gXtop.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+ (-y2)+")");
+	var y2 = parseFloat(gXbottom.selectAll('.tick').selectAll('line').attr("y2"));
+	gXbottom.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+(-y2)+")");
+	var x2 = parseFloat(gYleft.selectAll('.tick').selectAll('line').attr("x2"));
+	gYleft.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
+	var x2 = parseFloat(gYright.selectAll('.tick').selectAll('line').attr("x2"));
+	gYright.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
+
+	//and the "domain"
+	gXtop.select('.domain').attr("transform","scale(1,-1)");
+	gXbottom.select('.domain').attr("transform","scale(1,-1)");
+	gYleft.select('.domain').attr("transform","scale(-1,1)");
+	gYright.select('.domain').attr("transform","scale(-1,1)");
+
+	//remove additional numbers
 	if (topXlabel){
 		gXbottom.classed('axis-blank', true);
 	} else{
@@ -214,10 +279,6 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 		gYright.classed('axis-blank', true);
 	}
 
-	gYleft.call(yAxisLeft.ticks(nYticks));
-	gYright.call(yAxisRight.ticks(nYticks));
-	gXtop.call(xAxisTop.ticks(nXticks));
-	gXbottom.call(xAxisBottom.ticks(nXticks));
 
 	if (hideAllTicks){
 		gXbottom.classed('axis-blank', true);
@@ -226,28 +287,30 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 		gYright.classed('axis-blank', true);
 	}
 
+
+
 	//axes labels
-	var xXoffset = width/2. + margin.left;
-		xYoffset = height + margin.bottom - 20
-		yXoffset = -height/2.,
+	var xXoffset = width/2. + margin.left,
+		xYoffset = (height + margin.bottom),
+		yXoffset = -height/2. - yTitle.length/4.*parseFloat(labelFontsize), //seems to look OK, but not ideal
 		yYoffset = 20;
 
 	if (topXlabel){
 		xYoffset = 20;
-		yXoffset = -height; //not sure why this is needed
+		//yXoffset = -height; //not sure why this is needed
 	}
 	if (rightYlabel){
 		yYoffset = width + margin.left + 30;
 	}
 	plot.append("text")
-		.attr("class", "label")
+		.attr("class", "label x-title")
 		.attr("x", xXoffset)
 		.attr("y", xYoffset)
 		.style("text-anchor", "middle")
 		.style("font-size", labelFontsize)
 		.html(xTitle);
 	plot.append("text")
-		.attr("class", "label")
+		.attr("class", "label y-title")
 		.attr("transform", "rotate(-90)")
 		.attr("x", yXoffset)
 		.attr("y", yYoffset)
@@ -368,7 +431,15 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
 			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
 
-
+		//flip any new ticks
+		var y2 = parseFloat(plotObj.gXtop.selectAll('.tick').selectAll('line').attr("y2"));
+		plotObj.gXtop.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+ (-y2)+")");
+		var y2 = parseFloat(plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("y2"));
+		plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+(-y2)+")");
+		var x2 = parseFloat(plotObj.gYleft.selectAll('.tick').selectAll('line').attr("x2"));
+		plotObj.gYleft.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
+		var x2 = parseFloat(plotObj.gYright.selectAll('.tick').selectAll('line').attr("x2"));
+		plotObj.gYright.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
 
 		//the image
 		if (backgroundImage != null){
@@ -431,10 +502,10 @@ function createBarPlot(plotObj, data, horizontal = false){
 	if (horizontal){
 		bar.attr("x", left)
 			.attr("width", function(d) { return plotObj.xScale(+d.y) - left;})
-			.attr("y", function(d, i) {return height/data.length*i + top; }) 
+			.attr("y", function(d, i) {return height/data.length*i + top + 10; }) 
 			.attr("height",  height/data.length*0.8);
 	} else {
-		bar.attr("x", function(d, i) {return width/data.length*i + left; })
+		bar.attr("x", function(d, i) {return width/data.length*i + left + 10; })
 			.attr("width", width/data.length*0.8)
 			.attr("y", function(d) { return (plotObj.yScale(+d.y));}) 
 			.attr("height", function(d) { return height + top - plotObj.yScale(+d.y);})
@@ -447,26 +518,37 @@ function createBarPlot(plotObj, data, horizontal = false){
 //////////////
 function updateButtons(){
 
-	var periodSelectID = "#periodSelectButton"+params.ppos;
-	var periodModID = "#periodModButton"+params.mpos;
 
-	//reset all buttons
-	var b = d3.selectAll('.button');
-	b.classed('clicked', false);
-	d3.selectAll('.periodModButton').style('background-color',null)
-
-	//filter select box
-	d3.select(periodSelectID).classed('clicked', true);
-
-	//period modification box
-	b = d3.select(periodModID)
-	b.style('background-color',params.inputData[params.inputData.filters[params.ppos]].color);
-	b.classed('clicked', true);
-
-	//outlines on the bars
+	//change bar fill and outline and also plotted points based on selections 
 	params.inputData.filters.forEach(function(filter, j){
 		params.periodPlot.plot.selectAll("."+filter).classed("barSelected", false);
 		params.amplitudePlot.plot.selectAll("."+filter).classed("barSelected", false);
+
+		var onOff = d3.select('#onOff'+filter)
+		var onOffLabel = d3.select('#onOffLabel'+filter)
+		var fillColor = params.inputData[filter].color;
+		var lineColor = params.inputData[filter].color;
+		if (onOff.property('checked')){
+			onOffLabel.select("i").classed("fa-eye",true)
+			onOffLabel.select("i").classed("fa-eye-slash",false)
+			params.phasePlot.plot.selectAll("."+filter).filter(".circle").style("stroke", "black");
+			params.phasePlot.plot.selectAll("."+filter).filter(".circle").raise();
+			params.rawPlot.plot.selectAll("."+filter).filter(".circle").style("stroke", "black");
+			params.rawPlot.plot.selectAll("."+filter).filter(".circle").raise();
+		} else {
+			fillColor = "lightgray";
+			onOffLabel.select("i").classed("fa-eye-slash",true)
+			onOffLabel.select("i").classed("fa-eye",false)
+			params.phasePlot.plot.selectAll("."+filter).filter(".circle").style("stroke", fillColor);
+			params.rawPlot.plot.selectAll("."+filter).filter(".circle").style("stroke", fillColor);
+		}
+		onOffLabel.style('color',fillColor);
+		params.periodPlot.plot.selectAll("."+filter).style("fill", fillColor);
+		params.amplitudePlot.plot.selectAll("."+filter).style("fill", fillColor);
+		params.phasePlot.plot.selectAll("."+filter).style("fill", fillColor);
+		params.phasePlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
+		params.rawPlot.plot.selectAll("."+filter).style("fill", fillColor);
+		params.rawPlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
 	});
 
 	//outlines on rects
@@ -474,14 +556,15 @@ function updateButtons(){
 	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 
 	//length of period rects
-	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.inputData.multiples[params.mpos],
-		left = parseFloat(params.periodPlot.plot.select("defs").select("clipPath").select("rect").attr("x"));
+	var left = parseFloat(params.periodPlot.plot.select("defs").select("clipPath").select("rect").attr("x"));
 
 	//console.log(period, params.periodPlot.xScale(+period))
 	var t = params.periodPlot.plot.transition().duration(params.tDuration);			
 	params.periodPlot.plot.selectAll(".bar-rect").transition(t)
-		.attr("width", function(d) {return params.periodPlot.xScale(+d.y*params.inputData.multiples[params.mpos]) - left;}) ;
+		.attr("width", function(d) {return params.periodPlot.xScale(+d.y*params.periodMultiple) - left;}) ;
 
+	d3.select("#multipleText").attr("value","="+params.periodMultiple)
+	d3.select("#multipleText").text("="+params.periodMultiple)
 }
 
 //////////////
@@ -489,30 +572,175 @@ function updateButtons(){
 //////////////
 function updatePhasePlot(){
 
-	var period = params.inputData[params.inputData.filters[params.ppos]].period*params.inputData.multiples[params.mpos];
-
-	var p = 0;
-	params.inputData.filters.forEach(function(filter, j){
-
-		params.inputData[filter].obsmjd.forEach(function(d, i){
-			params.phaseData[p].x = (parseFloat(params.inputData[filter].obsmjd[i]) % period)/period;
-			p += 1;
-		})
+	var periodOld = params.period;
+	params.period = params.inputData[params.inputData.filters[params.ppos]].period*params.periodMultiple;
+	var cData = params.phasePlot.plot.selectAll("circle").data();
+	cData.forEach(function(d, j){
+		d.x = (d.xRaw % params.period)/params.period; 
+	});
+	var lData = params.phasePlot.plot.selectAll("line").data();
+	lData.forEach(function(d, j){
+		d.x = (d.xRaw % params.period)/params.period; 
 	});
 
+
 	//update the data with same transition duration as zoom above
-	var t = params.phasePlot.plot.transition().duration(params.tDuration);			
-	params.phasePlot.plot.selectAll("circle").data(params.phaseData).transition(t)
-		.attr("cx", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x); })
-	params.phasePlot.plot.selectAll(".error-line").data(params.phaseData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x);})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x);})
-	params.phasePlot.plot.selectAll(".error-cap-top").data(params.phaseData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) - params.errLen;})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) + params.errLen;})
-	params.phasePlot.plot.selectAll(".error-cap-bottom").data(params.phaseData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) - params.errLen;})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+params.phaseData[i].x) + params.errLen;})
+	var t = params.phasePlot.plot.transition().duration(params.tDuration);	
+	params.phasePlot.plot.selectAll("circle").data(cData).transition(t)
+		.attr("cx", function(d,i) {return params.phasePlot.xScale(+d.x); })
+	params.phasePlot.plot.selectAll(".error-line").data(lData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x);})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x);})
+	params.phasePlot.plot.selectAll(".error-cap-top").data(lData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x) - params.errLen;})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x) + params.errLen;})
+	params.phasePlot.plot.selectAll(".error-cap-bottom").data(lData).transition(t)
+		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x) - params.errLen;})
+		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x) + params.errLen;})
+
+}
+
+//////////////
+// create the buttons and link bars into control
+//////////////
+function createButtons(){
+		//link controls
+	params.inputData.filters.forEach(function(filt, j){
+		//select the period from the rect
+		params.periodPlot.plot.selectAll("."+filt)
+			.on('click',function(d){
+				params.ppos = j;
+				updateButtons();
+				updatePhasePlot();
+			})
+			// .on('contextmenu', function(){  //right click (easter egg drag to change period... not working yet :)
+			// 	d3.event.preventDefault();
+			// 	//console.log(d3.mouse(this)[0], d3.mouse(this)[1]);
+			// })
+			// .call(d3.drag().on('drag', function(){
+			// 	//console.log(d3.mouse(this)[0], d3.mouse(this)[1]);
+			// }));        	
+		params.amplitudePlot.plot.selectAll("."+filt)
+			.on('click',function(d){
+				params.ppos = j;
+				updateButtons();
+				updatePhasePlot();
+			});
+
+		//on/off buttons 
+		var y = parseFloat(params.periodPlot.plot.select('.'+filt).attr("y")) -2;//why do I need the -2?
+		var h = parseFloat(params.periodPlot.plot.select('.'+filt).attr("height"))
+		//https://www.w3schools.com/howto/howto_css_switch.asp
+		var onOffDiv = d3.select("#container").append("div")
+			.style('position','absolute')
+			.style('top',params.plotPositions.topPeriod + params.plotPositions.marginPeriod.top + y + 'px')
+			.style('left', params.plotPositions.leftPeriod + params.plotPositions.marginPeriod.left -2 + 'px')
+		onOffDiv.append("input")
+			.attr("type","checkbox")
+			.attr("name","onOff"+filt)
+			.attr("id","onOff"+filt)
+			.attr("value","valuable")
+			.property('checked', true)
+			.on("change",function(){
+				updateButtons();
+				updatePhasePlot();
+			});
+		onOffDiv.append("label")
+			.attr("for","onOff"+filt)
+			.attr("id","onOffLabel"+filt)
+			.style("height",h+"px")
+			.style("width",h+"px")
+			.style("cursor","pointer")
+			.append("i")
+				.attr("class","far")
+				.classed("fa-eye",true)
+				.style("font-size",h+"px")
+	});
+
+	var helpButton = d3.select("#container").append("div")
+		.attr('id','helpButton')
+		.attr('class','buttonDiv')
+		.style('top',0)
+		.style('left',0)
+		.append("i")
+			.attr("class","far fa-question-circle")
+
+	var flipButton = d3.select("#container").append("div")
+		.attr('id','flipButton')
+		.attr('class','buttonDiv')
+		.style('top',0)
+		.style('left',"50px")
+		.append("i")
+			.attr("class","fas fa-arrows-alt-v")
+
+	var multipleBox = d3.select("#container").append("div")
+		.attr('id','multipleBox')
+		.append('input')
+			.attr('type','text')
+			.attr('name','multipleText')
+			.attr('id','multipleText')
+			.attr('class','buttonDiv')
+			.style('top',0)
+			.style('left',"200px")
+			.style('width',"100px")
+			.style('text-align',"left")
+			.style('padding-left',"2px")
+			.style('border-left','none')
+			.attr('value',"="+params.inputData.multiples[params.mpos])
+			.text("="+params.inputData.multiples[params.mpos])
+	var elem = document.getElementById('multipleText');
+	elem.addEventListener('keypress', function(e){
+		if (e.keyCode == 13) {
+			value = elem.value;
+			if (value.slice(0,1) == "=") {
+				value = elem.value.slice(1)
+			}
+			console.log(value)
+			if (isNaN(value)){
+				value = params.periodMultiple;
+			} else {
+				params.periodMultiple = parseFloat(value); 
+			}
+			updateButtons();
+			updatePhasePlot();
+		}
+	});
+
+	//dropdown
+	var periodDropdown = d3.select("#container").append("div")
+		.attr('id','periodControl')
+		.attr('class','dropdown')
+		.style('top',0)
+		.style('left',"100px")
+		.style('border-right','none')
+		.text("Period Multiple")
+		.append("div")
+			.attr("id","periodDropdown")
+			.attr("class","dropdown-content")
+
+	d3.select('#periodControl').on('click', function(){
+		d = d3.select('#periodDropdown');
+		if (d.style('display') === 'none') {
+			d.style('display','block');
+			d3.select('#periodControl').classed('clickedDropdown', true);
+		} else {
+			d.style('display','none');
+			d3.select('#periodControl').classed('clickedDropdown', false);
+		}
+	});
+	var dropdown = d3.select('#periodDropdown');
+	params.inputData.multiples.forEach(function(m, j){
+		dropdown.append('div')
+			.style('display','block')
+			.attr('value', params.inputData.multiples[j])
+			.html("&nbsp;" + params.inputData.mnames[j])
+			.on('click',function(d){
+				params.periodMultiple = params.inputData.multiples[j];
+				updateButtons()
+				updatePhasePlot()
+			});	
+		});
+
 
 }
 
@@ -520,24 +748,9 @@ function updatePhasePlot(){
 // create the plots
 //////////////
 function startPlotting(){
-	//raw data
-	var	marginDays = {top: 50, right: 15, bottom: 5, left: 65},
-		heightDays = 100,
-		widthDays = 500,
-		marginPhase = {top: 5, right: 15, bottom: 65, left: 65},
-		heightPhase = 300,
-		widthPhase = widthDays, 
-		marginCMD = {top: 5, right: 5, bottom: 65, left: 65},
-		heightCMD = heightDays + heightPhase + 25, //I don't quite understand the sizing here
-		widthCMD = 400;
-		marginPeriod = {top: 5, right: 5, bottom: 65, left: 65},
-		heightPeriod = 50, 
-		widthPeriod = widthDays
-		marginAmplitude = {top: 5, right: 65, bottom: 5, left: 5},
-		heightAmplitude = heightPhase, 
-		widthAmplitude = 50;
 
-	var period = params.inputData[params.inputData.filters[params.ppos]].period;
+
+	params.period = params.inputData[params.inputData.filters[params.ppos]].period;
 
 
 	params.inputData.filters.forEach(function(filter, j){
@@ -565,7 +778,8 @@ function startPlotting(){
 				"errColor":params.inputData[filter].color,
 				"filter":filter
 			});
-			params.phaseData.push({"x":(parseFloat(params.inputData[filter].obsmjd[i]) % period)/period, 
+			params.phaseData.push({"x":(parseFloat(params.inputData[filter].obsmjd[i]) % params.period)/params.period, 
+				"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
 				"circleColor":params.inputData[filter].color, 
@@ -576,70 +790,78 @@ function startPlotting(){
 
 	});
 
+
+
+	params.phasePlot = createAxes(params.phaseData, 
+								params.plotPositions.widthPhase, 
+								params.plotPositions.heightPhase, 
+								params.plotPositions.marginPhase, 
+								"Phase", 
+								"Brightness&rarr;", 
+								"phasePlot", 
+								topXlabel=true, 
+								rightYlabel=false, 
+								left=params.plotPositions.leftPhase, 
+								top=params.plotPositions.topPhase,
+								labelFontsize="18pt");
+	createScatterPlot(params.phasePlot, params.phaseData);
+	//reposition left label
+	params.phasePlot.plot.select(".y-title").attr("x",-310);
+
+	params.rawPlot = createAxes(params.rawData, 
+								params.plotPositions.widthDays, 
+								params.plotPositions.heightDays, 
+								params.plotPositions.marginDays, 
+								"Time (days)", 
+								"", 
+								"rawPlot", 
+								topXlabel=false, 
+								rightYlabel=false, 
+								left=params.plotPositions.leftDays, 
+								top=params.plotPositions.topDays, 
+								labelFontsize="18pt", 
+								axisFontsize="10pt");
+	createScatterPlot(params.rawPlot, params.rawData);
+	//reposition bottom label
+	params.rawPlot.plot.select(".x-title").attr("y",150);
+
 	//dummy data for now
 	var foo = [{"x":2,
 				"y":5,
 				"ye":1,
-				"circleColor":"black",
+				"circleColor":params.inputData[params.inputData.filters[params.ppos]].color,
 				"errColor":"none"}];
 	params.CMDPlot = createAxes(foo, 
-								widthCMD, 
-								heightCMD, 
-								marginCMD, 
+								params.plotPositions.widthCMD, 
+								params.plotPositions.heightCMD, 
+								params.plotPositions.marginCMD, 
 								"&larr;Temperature", 
-								"Brightness&rarr;", 
+								"", 
 								"CMDPlot", 
 								topXlabel=false, 
 								rightYlabel=false, 
-								left=0,
-								top=(marginDays.top - marginDays.bottom), //I don't quite understand the position here
+								left=params.plotPositions.leftCMD,
+								top=params.plotPositions.topCMD,
 								labelFontsize="18pt", 
-								axisFontsize="12pt",
+								axisFontsize="10pt",
 								xExtent = [-0.7644119, 4.715261459350586], 
 								yExtent=[16.3, -3.263948750885376],
 								hideAllTicks = true);								 
-	createScatterPlot(params.CMDPlot, foo, backgroundImage = "data/CMDbackground.svg");
-
-	var leftPos = (widthCMD + marginCMD.left + marginCMD.right + 40);
-	params.rawPlot = createAxes(params.rawData, 
-								widthDays, 
-								heightDays, 
-								marginDays, 
-								"Time (days)", 
-								"Brightness&rarr;", 
-								"rawPlot", 
-								topXlabel=true, 
-								rightYlabel=false, 
-								left=leftPos, 
-								top=0, 
-								labelFontsize="12pt", 
-								axisFontsize="10pt");
-	createScatterPlot(params.rawPlot, params.rawData);
-
-	params.phasePlot = createAxes(params.phaseData, 
-								widthPhase, 
-								heightPhase, 
-								marginPhase, 
-								"Phase", 
-								"Brightness&rarr;", 
-								"phasePlot", 
-								topXlabel=false, 
-								rightYlabel=false, 
-								left=leftPos, 
-								top=(heightDays + marginPhase.bottom + marginPhase.top));
-	createScatterPlot(params.phasePlot, params.phaseData);
+	createScatterPlot(params.CMDPlot, foo, backgroundImage = "data/CMDbackground_BW.svg");
+	//reposition bottom label
+	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
 	params.periodPlot = createAxes(params.periodData, 
-								widthPeriod, 
-								heightPeriod, 
-								marginPeriod, 
+								params.plotPositions.widthPeriod, 
+								params.plotPositions.heightPeriod, 
+								params.plotPositions.marginPeriod, 
 								"Period&rarr;", 
 								"", 
 								"periodPlot", 
-								topXlabel=false, 
+								topXlabel=true, 
 								rightYlabel=false, 
-								left=leftPos,
-								top=(heightDays + heightPhase + marginPhase.bottom + marginPhase.top + marginDays.bottom + marginDays.top), 
+								left=params.plotPositions.leftPeriod,
+								top=params.plotPositions.topPeriod, 
 								labelFontsize="12pt", 
 								axisFontsize="10pt",
 								xExtent = [0.1, 1000], 
@@ -650,21 +872,21 @@ function startPlotting(){
 								nXticks = 4);					
 	createBarPlot(params.periodPlot, params.periodData, horizontal = true);
 	//hide some axes
-	params.periodPlot.gXtop.classed("hidden",true)
+	params.periodPlot.gXbottom.classed("hidden",true)
 	params.periodPlot.gYleft.classed("hidden",true)
 	params.periodPlot.gYright.classed("hidden",true)
 
 	params.amplitudePlot = createAxes(params.amplitudeData, 
-								widthAmplitude, 
-								heightAmplitude, 
-								marginAmplitude, 
+								params.plotPositions.widthAmplitude, 
+								params.plotPositions.heightAmplitude, 
+								params.plotPositions.marginAmplitude, 
 								"", 
 								"Amplitude&rarr;", 
 								"amplitudePlot", 
 								topXlabel=false, 
-								rightYlabel=true, 
-								left=leftPos + widthPhase + marginPhase.left + marginPhase.right,
-								top=(heightDays + marginPhase.bottom + marginPhase.top), 
+								rightYlabel=false, 
+								left=params.plotPositions.leftAmplitude,
+								top=params.plotPositions.topAmplitude, 
 								labelFontsize="12pt", 
 								axisFontsize="10pt",
 								xExtent = [0,params.amplitudeData.length], 
@@ -678,78 +900,16 @@ function startPlotting(){
 	//hide some axes
 	params.amplitudePlot.gXtop.classed("hidden",true)
 	params.amplitudePlot.gXbottom.classed("hidden",true)
-	params.amplitudePlot.gYleft.classed("hidden",true)
-	//console.log(params.amplitudePlot.gYright.selectAll('.tick').selectAll('line').attr("x2", 6))
+	params.amplitudePlot.gYright.classed("hidden",true)
 
 	//initial outlines on the bars
 	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 
 
-	//select the period from the rect
-	params.inputData.filters.forEach(function(filt, j){
-		params.periodPlot.plot.selectAll("."+filt)
-			.on('click',function(d){
-				params.ppos = j;
-				updateButtons();
-				updatePhasePlot();
-			});
-		params.amplitudePlot.plot.selectAll("."+filt)
-			.on('click',function(d){
-				params.ppos = j;
-				updateButtons();
-				updatePhasePlot();
-			});
-	});
 
-	//create the buttons
-	var leftPos = (widthDays + marginDays.left + marginDays.right + widthCMD + marginCMD.left + marginCMD.right + 200) + 'px'
-	var periodSelectDiv = d3.select("#container").append("div")
-		.attr('id','periodSelectDiv')
-		.attr('class','buttonsDiv')
-		.style('position','absolute')
-		.style('top', (marginDays.top + 25) + 'px')
-		.style('left', leftPos)
-		.text('1) Select the filter.')
-	params.inputData.filters.forEach(function(filt, j){
-		periodSelectDiv.append('div')
-			.attr('id', 'periodSelectButton'+j)
-			.attr('class', 'button')
-			.style('background-color', params.inputData[filt].color)
-			.text(filt)
-			.on('click',function(d){
-				params.ppos = j;
-				updateButtons();
-				updatePhasePlot();
-			});
-	});
-	d3.select("#periodSelectButton"+params.ppos).classed('clicked', true)
-
-	var bsize = periodSelectDiv.node().getBoundingClientRect();
-
-	var periodModDiv = d3.select("#container").append("div")
-		.attr('id','periodModDiv')
-		.attr('class','buttonsDiv')
-		.style('position','absolute')
-		.style('top', (bsize.y + bsize.height + 20) + 'px')
-		.style('left', leftPos)
-		.text('2) Modify the period.')
-	params.inputData.multiples.forEach(function(m, j){
-		periodModDiv.append('div')
-			.attr('id', 'periodModButton'+j)
-			.attr('class', 'button periodModButton')
-			.text(params.inputData.mnames[j])
-			.on('click',function(d){
-				params.mpos = j;
-				updateButtons()
-				updatePhasePlot()
-			});	
-		});
-	b = d3.select("#periodModButton"+params.mpos);
-	b.classed('clicked', true);
-	b.style('background-color',params.inputData[params.inputData.filters[params.ppos]].color);
-
-
+	createButtons();
+	updateButtons();
 }
 
 //////////////
