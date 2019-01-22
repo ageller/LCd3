@@ -9,6 +9,8 @@
 
 //include data for phase outside of (-0.1,1.1), and gray those regions out
 
+//add text under each button
+
 //the params object holds all "global" variables
 var params;
 function defineParams(){
@@ -42,6 +44,7 @@ function defineParams(){
 		this.fpos = 0; //which feature plot to show
 
 		this.r0 = 3.5; //size of circles in plots
+		this.phaseLim = 0.2;// region in phase plot to repeat on either side
 
 		//positions for all the plots
 		this.plotPositions = {};
@@ -666,15 +669,15 @@ function createButtons(){
 		.style('top',0)
 		.style('left',"50px")
 		.on('mousedown',function(d){
-			var domain = params.phasePlot.yScale.domain();
-			params.phasePlot.yExtent = [domain[1], domain[0]]
-			params.phasePlot.yScale.domain(params.phasePlot.yExtent);
-			updatePlotData(params.phasePlot, tDur=20)
-
-			var domain = params.rawPlot.yScale.domain();
-			params.rawPlot.yExtent = [domain[1], domain[0]]
-			params.rawPlot.yScale.domain(params.rawPlot.yExtent);
-			updatePlotData(params.rawPlot, tDur=20)
+			plots = [params.phasePlot, params.rawPlot]
+			plots.forEach(function(p){
+				var domain = p.yScale.domain();
+				p.yExtent = [domain[1], domain[0]]
+				p.yScale.domain(p.yExtent);
+				updatePlotData(p, tDur=20)
+				var fill = p.plot.select("#flipRect").classed("filledRect")
+				p.plot.select("#flipRect").classed("filledRect", !fill)
+			})
 
 			//updatePhasePlot(tDur = 20);
 			var sel = d3.select("#flipButton").classed("buttonDivSelected")
@@ -814,7 +817,9 @@ function startPlotting(){
 				"errColor":params.inputData[filter].color,
 				"filter":filter
 			});
-			params.phaseData.push({"x":(parseFloat(params.inputData[filter].obsmjd[i]) % params.period)/params.period, 
+			var phase = (parseFloat(params.inputData[filter].obsmjd[i]) % params.period)/params.period;
+			var phaseNew = null;
+			params.phaseData.push({"x": phase,
 				"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
@@ -822,6 +827,23 @@ function startPlotting(){
 				"errColor":params.inputData[filter].color,
 				"filter":filter
 			});
+			if (phase < params.phaseLim){
+				phaseNew = phase + 1;
+			}
+			if (phase > 1.-params.phaseLim){
+				phaseNew = phase - 1;
+			}
+			if (phaseNew != null){
+				params.phaseData.push({"x": phaseNew,
+					"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
+					"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
+					"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
+					"circleColor":params.inputData[filter].color, 
+					"errColor":params.inputData[filter].color,
+					"filter":filter
+				});	
+			}
+
 		})
 
 	});
@@ -840,6 +862,12 @@ function startPlotting(){
 								left=params.plotPositions.leftPhase, 
 								top=params.plotPositions.topPhase,
 								labelFontsize="18pt");
+	var main = params.phasePlot.plot.select(".main")
+	main.append('rect')
+		.attr("id","flipRect")
+		.attr("width", "100%")
+		.attr("height", "100%")
+		.attr("fill", "none");
 	createScatterPlot(params.phasePlot, params.phaseData);
 	//reposition left label
 	params.phasePlot.plot.select(".y-title").attr("x",-310);
@@ -857,6 +885,12 @@ function startPlotting(){
 								top=params.plotPositions.topDays, 
 								labelFontsize="18pt", 
 								axisFontsize="10pt");
+	var main = params.rawPlot.plot.select(".main")
+	main.append('rect')
+		.attr("id","flipRect")
+		.attr("width", "100%")
+		.attr("height", "100%")
+		.attr("fill", "none");
 	createScatterPlot(params.rawPlot, params.rawData);
 	//reposition bottom label
 	params.rawPlot.plot.select(".x-title").attr("y",150);
