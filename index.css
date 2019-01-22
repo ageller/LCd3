@@ -179,3 +179,17 @@ input[type=checkbox]:checked + label
 	fill:black;
 	opacity:0.2;
 }
+.buttonInstructions{
+	position:absolute;
+	height:20px;
+	width: 50px;
+	padding: 0px;
+	margin: 0px;
+	color: var(--main-foreground-color);
+	background-color:none;
+	text-align: center;
+	opacity: 1.0;
+	display:block;
+	font-size:12px;
+	top:55px;
+}

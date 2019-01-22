@@ -5,8 +5,6 @@
 
 //could make a fun transition between feature plots (flying in/out from side)
 
-//include data for phase outside of (-0.1,1.1), and gray those regions out
-
 //add text under each button
 
 //the params object holds all "global" variables
@@ -47,7 +45,7 @@ function defineParams(){
 		//positions for all the plots
 		this.plotPositions = {};
 		var width = 500,
-			topPos = 100,
+			topPos = 75,
 			leftPos = 5;
 
 		this.plotPositions.marginPhase = {top: 50, right: 5, bottom: 65, left: 65}; //adding to the bottom so that I can shift the y label
@@ -789,6 +787,31 @@ function createButtons(){
 		})
 		.append("i")
 			.attr("class","far fa-arrow-alt-circle-right")
+
+
+	//descriptions under each button
+	d3.select("#container").append("div")
+		.attr("class","buttonInstructions")
+		.style("left",0)
+		.text("help");
+	d3.select("#container").append("div")
+		.attr("class","buttonInstructions")
+		.style("left","50px")
+		.text("flip");
+	d3.select("#container").append("div")
+		.attr("class","buttonInstructions")
+		.style("left","100px")
+		.style("width","200px")
+		.text("change the period");
+	d3.select("#container").append("div")
+		.attr("class","buttonInstructions")
+		.style("left","300px")
+		.text("on/off");	
+	
+	d3.select("#container").append("div")
+		.attr("class","buttonInstructions")
+		.style("left","830px")
+		.text("next feature");	
 }
 
 //////////////
