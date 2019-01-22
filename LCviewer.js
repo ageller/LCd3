@@ -1,8 +1,11 @@
 //see the look here, and match it? https://github.com/zooniverse/front-end-monorepo/pull/376
 
 //could use a full screen button?
-//also a help button (?)
 //need to fix input box to update after enter and then selection
+
+//could make a fun transition between feature plots (flying in/out from side)
+
+//flip is broken when zooming
 
 //the params object holds all "global" variables
 var params;
@@ -36,35 +39,37 @@ function defineParams(){
 		this.mpos = 0; //which multiple to use (for inputData.multiples)
 		this.fpos = 0; //which feature plot to show
 
-	//positions for all the plots
-	this.plotPositions = {};
-	var width = 500,
-		topPos = 100,
-		leftPos = 5;
+		this.r0 = 3.5; //size of circles in plots
 
-	this.plotPositions.marginPhase = {top: 50, right: 5, bottom: 65, left: 65}; //adding to the bottom so that I can shift the y label
-	this.plotPositions.heightPhase = 300;
-	this.plotPositions.widthPhase = width;
-	this.plotPositions.leftPhase = leftPos;
-	this.plotPositions.topPhase = topPos;
+		//positions for all the plots
+		this.plotPositions = {};
+		var width = 500,
+			topPos = 100,
+			leftPos = 5;
 
-	this.plotPositions.marginDays = {top: 5, right: 5, bottom: 65, left: 65};
-	this.plotPositions.heightDays = 100;
-	this.plotPositions.widthDays = width;
-	this.plotPositions.leftDays = leftPos;
-	this.plotPositions.topDays = topPos + this.plotPositions.heightPhase + this.plotPositions.marginPhase.top + 5; //5 is the desired marginPhase.bottom
+		this.plotPositions.marginPhase = {top: 50, right: 5, bottom: 65, left: 65}; //adding to the bottom so that I can shift the y label
+		this.plotPositions.heightPhase = 300;
+		this.plotPositions.widthPhase = width;
+		this.plotPositions.leftPhase = leftPos;
+		this.plotPositions.topPhase = topPos;
 
-	this.plotPositions.marginCMD = {top: 50, right: 5, bottom: 65, left: 5};
-	this.plotPositions.heightCMD = this.plotPositions.heightDays + this.plotPositions.heightPhase  + this.plotPositions.marginDays.top + 5; //5 is the desired marginPhase.bottom
-	this.plotPositions.widthCMD = this.plotPositions.heightPhase;
-	this.plotPositions.leftCMD = leftPos + width + this.plotPositions.marginPhase.left + this.plotPositions.marginPhase.right;
-	this.plotPositions.topCMD = topPos;
+		this.plotPositions.marginDays = {top: 5, right: 5, bottom: 65, left: 65};
+		this.plotPositions.heightDays = 100;
+		this.plotPositions.widthDays = width;
+		this.plotPositions.leftDays = leftPos;
+		this.plotPositions.topDays = topPos + this.plotPositions.heightPhase + this.plotPositions.marginPhase.top + 5; //5 is the desired marginPhase.bottom
 
-	this.plotPositions.marginFeature = {top: 2, right: 5, bottom: 30, left: 15};
-	this.plotPositions.heightFeature = 50; 
-	this.plotPositions.widthFeature = this.plotPositions.widthDays - 10;
-	this.plotPositions.leftFeature = 325;
-	this.plotPositions.topFeature = 0;
+		this.plotPositions.marginCMD = {top: 50, right: 5, bottom: 65, left: 5};
+		this.plotPositions.heightCMD = this.plotPositions.heightDays + this.plotPositions.heightPhase  + this.plotPositions.marginDays.top + 5; //5 is the desired marginPhase.bottom
+		this.plotPositions.widthCMD = this.plotPositions.heightPhase;
+		this.plotPositions.leftCMD = leftPos + width + this.plotPositions.marginPhase.left + this.plotPositions.marginPhase.right;
+		this.plotPositions.topCMD = topPos;
+
+		this.plotPositions.marginFeature = {top: 2, right: 5, bottom: 30, left: 15};
+		this.plotPositions.heightFeature = 50; 
+		this.plotPositions.widthFeature = this.plotPositions.widthDays - 10;
+		this.plotPositions.leftFeature = 325;
+		this.plotPositions.topFeature = 0;
 
 
 	}
@@ -164,7 +169,36 @@ function addData(data, plot, xScale, yScale, r=3.5){
 		.attr("cy", function(d) { return yScale(+d.y); })
 }
 
+function updatePlotData(plotObj, tDur = params.tDuration, r = params.r0){
 
+	var t = d3.transition().duration(tDur);
+
+	//the points
+	plotObj.plot.select(".axis-x-top").transition(t).call(plotObj.xAxisTop);
+	plotObj.plot.select(".axis-x-bottom").transition(t).call(plotObj.xAxisBottom);
+	plotObj.plot.select(".axis-y-left").transition(t).call(plotObj.yAxisLeft);
+	plotObj.plot.select(".axis-y-right").transition(t).call(plotObj.yAxisRight);
+	plotObj.plot.selectAll("circle").transition(t)
+		.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+		.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+		.attr("r", r);
+	plotObj.plot.selectAll(".error-line").transition(t)
+		.attr("x1", function(d) {return plotObj.xScale(+d.x);})
+		.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+		.attr("x2", function(d) {return plotObj.xScale(+d.x);})
+		.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+	plotObj.plot.selectAll(".error-cap-top").transition(t)
+		.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+		.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+		.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+		.attr("y2", function(d) {return plotObj.yScale(+d.y + d.ye);});
+	plotObj.plot.selectAll(".error-cap-bottom").transition(t)
+		.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+		.attr("y1", function(d) {return plotObj.yScale(+d.y - d.ye);})
+		.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+		.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+
+}
 //////////////
 // create the plot axes
 //////////////
@@ -345,6 +379,8 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 		left = parseFloat(rect.attr("x")),
 		top = parseFloat(rect.attr("y"));
 
+
+
 	var image = null;
 	if (backgroundImage != null){
 		image = main.append("image")
@@ -355,10 +391,10 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			.attr("xlink:href", backgroundImage);
 	}
 
-
 	//add the data (from external function)
-	var r0 = 3.5; //circle radius
-	addData(data, main, plotObj.xScale, plotObj.yScale, r=r0);
+	addData(data, main, plotObj.xScale, plotObj.yScale);
+
+
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
@@ -384,13 +420,13 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			plotObj.xScale.domain([plotObj.xScale.invert(s[0][0]), plotObj.xScale.invert(s[1][0])]);//.nice();
 			plotObj.yScale.domain([plotObj.yScale.invert(s[1][1]), plotObj.yScale.invert(s[0][1])]);//.nice();
 			plotObj.plot.select(".brush").call(brush.move, null);
-			if (backgroundImage != null){
-				var trans = image.attr("transform");
-				if (trans == ""){
-					trans = null;
-				}
-				translate = getTransformation(trans)
-			}
+			// if (image != null){
+			// 	var trans = image.attr("transform");
+			// 	if (trans == ""){
+			// 		trans = null;
+			// 	}
+			// 	translate = getTransformation(trans)
+			// }
 
 		}
 		zoom(s, translate);
@@ -401,44 +437,9 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 	}
 
 	function zoom(s, translate) {
-
-		var t = plotObj.plot.transition().duration(params.tDuration);
-		//the points
-		plotObj.plot.select(".axis-x-top").transition(t).call(plotObj.xAxisTop);
-		plotObj.plot.select(".axis-x-bottom").transition(t).call(plotObj.xAxisBottom);
-		plotObj.plot.select(".axis-y-left").transition(t).call(plotObj.yAxisLeft);
-		plotObj.plot.select(".axis-y-right").transition(t).call(plotObj.yAxisRight);
-		plotObj.plot.selectAll("circle").transition(t)
-			.attr("cx", function(d) {return plotObj.xScale(+d.x); })
-			.attr("cy", function(d) {return plotObj.yScale(+d.y); });
-		plotObj.plot.selectAll(".error-line").transition(t)
-			.attr("x1", function(d) {return plotObj.xScale(+d.x);})
-			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return plotObj.xScale(+d.x);})
-			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
-		plotObj.plot.selectAll(".error-cap-top").transition(t)
-			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
-			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return plotObj.yScale(+d.y + d.ye);});
-		plotObj.plot.selectAll(".error-cap-bottom").transition(t)
-			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
-			.attr("y1", function(d) {return plotObj.yScale(+d.y - d.ye);})
-			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
-			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
-
-		//flip any new ticks
-		var y2 = parseFloat(plotObj.gXtop.selectAll('.tick').selectAll('line').attr("y2"));
-		plotObj.gXtop.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+ (-y2)+")");
-		var y2 = parseFloat(plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("y2"));
-		plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+(-y2)+")");
-		var x2 = parseFloat(plotObj.gYleft.selectAll('.tick').selectAll('line').attr("x2"));
-		plotObj.gYleft.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
-		var x2 = parseFloat(plotObj.gYright.selectAll('.tick').selectAll('line').attr("x2"));
-		plotObj.gYright.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
-
 		//the image
-		if (backgroundImage != null){
+		var sX = 1.
+		if (image != null){
 			var sWidth = s[1][0] - s[0][0];
 			var sHeight = s[1][1] - s[0][1];
 
@@ -451,7 +452,7 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			var scaleY = height/sHeight;
 
 			//multiply by old scaling for total scaling
-			var sX = scaleX*translate.scaleX;
+			sX = scaleX*translate.scaleX;
 			var sY = scaleY*translate.scaleY;
 
 			//translation
@@ -459,15 +460,26 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			var dy = top  - dEdgeY*scaleY ;
 
 			//now scale and translate the image
+			var t = d3.transition().duration(params.tDuration);
 			image.transition(t)
 				.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
 
-			//increase the size of the circle
-			plotObj.plot.selectAll("circle").transition(t).attr("r",r0*sX);
-
 	
-
 		}
+
+		updatePlotData(plotObj, tDur = params.tDuration, r = params.r0*sX);
+
+		//flip any new ticks
+		var y2 = parseFloat(plotObj.gXtop.selectAll('.tick').selectAll('line').attr("y2"));
+		plotObj.gXtop.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+ (-y2)+")");
+		var y2 = parseFloat(plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("y2"));
+		plotObj.gXbottom.selectAll('.tick').selectAll('line').attr("transform","translate(0,"+(-y2)+")");
+		var x2 = parseFloat(plotObj.gYleft.selectAll('.tick').selectAll('line').attr("x2"));
+		plotObj.gYleft.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
+		var x2 = parseFloat(plotObj.gYright.selectAll('.tick').selectAll('line').attr("x2"));
+		plotObj.gYright.selectAll('.tick').selectAll('line').attr("transform","translate("+(-x2)+",0)");
+
+
 
 
 	}
@@ -562,7 +574,7 @@ function updateButtons(){
 	var left = parseFloat(params.featurePlots[0].plot.select("defs").select("clipPath").select("rect").attr("x"));
 
 	//console.log(period, params.periodPlot.xScale(+period))
-	var t = params.featurePlots[0].plot.transition().duration(params.tDuration);			
+	var t = d3.transition().duration(params.tDuration);			
 	params.featurePlots[0].plot.selectAll(".bar-rect").transition(t)
 		.attr("width", function(d) {return params.featurePlots[0].xScale(+d.y*params.periodMultiple) - left;}) ;
 
@@ -573,7 +585,7 @@ function updateButtons(){
 //////////////
 // updates to the phase plot (including transitions)
 //////////////
-function updatePhasePlot(){
+function updatePhasePlot(tDur = params.tDuration){
 
 	var periodOld = params.period;
 	params.period = params.inputData[params.inputData.filters[params.ppos]].period*params.periodMultiple;
@@ -586,20 +598,8 @@ function updatePhasePlot(){
 		d.x = (d.xRaw % params.period)/params.period; 
 	});
 
+	updatePlotData(params.phasePlot, tDur=tDur)
 
-	//update the data with same transition duration as zoom above
-	var t = params.phasePlot.plot.transition().duration(params.tDuration);	
-	params.phasePlot.plot.selectAll("circle").data(cData).transition(t)
-		.attr("cx", function(d,i) {return params.phasePlot.xScale(+d.x); })
-	params.phasePlot.plot.selectAll(".error-line").data(lData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x);})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x);})
-	params.phasePlot.plot.selectAll(".error-cap-top").data(lData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x) - params.errLen;})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x) + params.errLen;})
-	params.phasePlot.plot.selectAll(".error-cap-bottom").data(lData).transition(t)
-		.attr("x1", function(d,i) {return params.phasePlot.xScale(+d.x) - params.errLen;})
-		.attr("x2", function(d,i) {return params.phasePlot.xScale(+d.x) + params.errLen;})
 
 }
 
@@ -663,6 +663,13 @@ function createButtons(){
 		.attr('class','buttonDiv buttonDivUse')
 		.style('top',0)
 		.style('left',"50px")
+		.on('mousedown',function(d){
+			var domain = params.phasePlot.yScale.domain();
+			params.phasePlot.yScale.domain([domain[1], domain[0]]);
+			updatePhasePlot(tDur = 20);
+			var sel = d3.select("#flipButton").classed("buttonDivSelected")
+			d3.select("#flipButton").classed("buttonDivSelected", !sel)
+		})
 		.append("i")
 			.attr("class","fas fa-arrows-alt-v")
 
@@ -849,7 +856,8 @@ function startPlotting(){
 				"y":5,
 				"ye":1,
 				"circleColor":params.inputData[params.inputData.filters[params.ppos]].color,
-				"errColor":"none"}];
+				"errColor":"none",
+				"filter":params.inputData.filters[params.ppos]}];
 	params.CMDPlot = createAxes(foo, 
 								params.plotPositions.widthCMD, 
 								params.plotPositions.heightCMD, 

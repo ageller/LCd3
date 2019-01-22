@@ -70,6 +70,11 @@ body {
 	background-color:var(--main-background-color);	
 }
 
+.buttonDivSelected {
+	background-color: var(--main-foreground-color);
+	color: var(--main-background-color);
+}
+
 .buttonDivUse:hover {
 	background-color: var(--main-foreground-color);
 	color: var(--main-background-color);
