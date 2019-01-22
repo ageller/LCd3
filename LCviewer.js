@@ -5,8 +5,6 @@
 
 //could make a fun transition between feature plots (flying in/out from side)
 
-//add background color when flipped?, or maybe change the axes color?  
-
 //include data for phase outside of (-0.1,1.1), and gray those regions out
 
 //add text under each button
@@ -203,6 +201,16 @@ function updatePlotData(plotObj, tDur = params.tDuration, r = params.r0){
 		.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
 		.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
 
+	//I would rather include this in updatePhasePlot, but this needs to work on zoom as well...
+	if (! plotObj.plot.select("#phaseBlockLeft").empty()){
+		var w = plotObj.xScale(0) - plotObj.xScale(-params.phaseLim);
+		plotObj.plot.select("#phaseBlockLeft").transition(t)
+			.attr("x",plotObj.xScale(-params.phaseLim))
+			.attr("width",w);
+		plotObj.plot.select("#phaseBlockRight").transition(t)
+			.attr("x",plotObj.xScale(1))
+			.attr("width",w);
+	}
 }
 //////////////
 // create the plot axes
@@ -863,6 +871,22 @@ function startPlotting(){
 								top=params.plotPositions.topPhase,
 								labelFontsize="18pt");
 	var main = params.phasePlot.plot.select(".main")
+	//var w = params.phasePlot.xScale(0) - params.plotPositions.marginPhase.left;
+	var w = (params.phasePlot.xScale(0) - params.phasePlot.xScale(-params.phaseLim) );
+	main.append('rect')
+		.attr("id","phaseBlockLeft")
+		.attr("width", w)
+		.attr("height", params.plotPositions.heightPhase)
+		.attr("x",params.phasePlot.xScale(-params.phaseLim))
+		.attr("y",params.plotPositions.marginPhase.top)
+		.attr("fill", "lightgray");
+	main.append('rect')
+		.attr("id","phaseBlockRight")
+		.attr("width", w)
+		.attr("height", params.plotPositions.heightPhase)
+		.attr("x",params.phasePlot.xScale(1))
+		.attr("y",params.plotPositions.marginPhase.top)
+		.attr("fill", "lightgray");
 	main.append('rect')
 		.attr("id","flipRect")
 		.attr("width", "100%")
