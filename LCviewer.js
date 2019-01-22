@@ -5,8 +5,6 @@
 
 //could make a fun transition between feature plots (flying in/out from side)
 
-//add text under each button
-
 //the params object holds all "global" variables
 var params;
 function defineParams(){
@@ -806,6 +804,7 @@ function createButtons(){
 	d3.select("#container").append("div")
 		.attr("class","buttonInstructions")
 		.style("left","300px")
+		.style("width","40px")
 		.text("on/off");	
 	
 	d3.select("#container").append("div")
