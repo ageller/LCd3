@@ -58,8 +58,6 @@ body {
 	width: 50px;
 	padding: 0px;
 	margin: 0px;
-	color: var(--main-foreground-color);
-	background-color:var(--main-background-color);
 	text-align: center;
 	border: 2px solid var(--main-foreground-color);
 	/*border-radius: 5px;*/
@@ -67,12 +65,17 @@ body {
 	display:block;
 	font-size:46px;
 }
-.buttonDiv:hover {
+.buttonDivUse{
+	color: var(--main-foreground-color);
+	background-color:var(--main-background-color);	
+}
+
+.buttonDivUse:hover {
 	background-color: var(--main-foreground-color);
 	color: var(--main-background-color);
 	cursor: pointer;
 }
-.buttonDiv input{
+.buttonDivUse input{
 	position:absolute;
 	height:50px;
 	width: 50px;

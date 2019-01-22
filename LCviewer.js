@@ -27,21 +27,20 @@ function defineParams(){
 		this.rawPlot;
 		this.phasePlot;
 		this.CMDPlot;
-		this.periodPlot;
-		this.amplitudePlot;
+		this.featurePlots = [];
 
 		this.period;
 		this.periodMultiple = 1.;
 
 		this.ppos = 0; //which filter to use to define the period (for inputData.filters)
 		this.mpos = 0; //which multiple to use (for inputData.multiples)
-
+		this.fpos = 0; //which feature plot to show
 
 	//positions for all the plots
 	this.plotPositions = {};
 	var width = 500,
 		topPos = 100,
-		leftPos = 100;
+		leftPos = 5;
 
 	this.plotPositions.marginPhase = {top: 50, right: 5, bottom: 65, left: 65}; //adding to the bottom so that I can shift the y label
 	this.plotPositions.heightPhase = 300;
@@ -61,17 +60,12 @@ function defineParams(){
 	this.plotPositions.leftCMD = leftPos + width + this.plotPositions.marginPhase.left + this.plotPositions.marginPhase.right;
 	this.plotPositions.topCMD = topPos;
 
-	this.plotPositions.marginPeriod = {top: 30, right: 5, bottom: 15, left: 65};
-	this.plotPositions.heightPeriod = topPos - this.plotPositions.marginPeriod.top - this.plotPositions.marginPeriod.bottom; 
-	this.plotPositions.widthPeriod = this.plotPositions.widthDays;
-	this.plotPositions.leftPeriod = leftPos;
-	this.plotPositions.topPeriod = 0;
+	this.plotPositions.marginFeature = {top: 2, right: 5, bottom: 30, left: 15};
+	this.plotPositions.heightFeature = 50; 
+	this.plotPositions.widthFeature = this.plotPositions.widthDays - 10;
+	this.plotPositions.leftFeature = 325;
+	this.plotPositions.topFeature = 0;
 
-	this.plotPositions.marginAmplitude = {top: 50, right: 15, bottom: 65, left: 30};
-	this.plotPositions.heightAmplitude = this.plotPositions.heightCMD;
-	this.plotPositions.widthAmplitude = leftPos - this.plotPositions.marginAmplitude.left - this.plotPositions.marginAmplitude.right;
-	this.plotPositions.leftAmplitude = 0;
-	this.plotPositions.topAmplitude = this.plotPositions.topPhase;
 
 	}
 	params = new ParamsInit();
@@ -204,9 +198,11 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	var plot = d3.select("#container").append("svg")
 		.attr('class',className)
 		.style('position', 'absolute')
+		.style('top',top)
+		.style('left',left)
 		.attr("width", (width + margin.left + margin.right))
 		.attr("height", (height + margin.top + margin.bottom))
-		.attr("transform", "translate(" + left + "," + top + ")")
+		//.attr("transform", "translate(" + left + "," + top + ")")
 
 
 	//https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb
@@ -502,7 +498,7 @@ function createBarPlot(plotObj, data, horizontal = false){
 	if (horizontal){
 		bar.attr("x", left)
 			.attr("width", function(d) { return plotObj.xScale(+d.y) - left;})
-			.attr("y", function(d, i) {return height/data.length*i + top + 10; }) 
+			.attr("y", function(d, i) {return height/data.length*i + top +2; }) 
 			.attr("height",  height/data.length*0.8);
 	} else {
 		bar.attr("x", function(d, i) {return width/data.length*i + left + 10; })
@@ -521,8 +517,7 @@ function updateButtons(){
 
 	//change bar fill and outline and also plotted points based on selections 
 	params.inputData.filters.forEach(function(filter, j){
-		params.periodPlot.plot.selectAll("."+filter).classed("barSelected", false);
-		params.amplitudePlot.plot.selectAll("."+filter).classed("barSelected", false);
+
 
 		var onOff = d3.select('#onOff'+filter)
 		var onOffLabel = d3.select('#onOffLabel'+filter)
@@ -543,25 +538,33 @@ function updateButtons(){
 			params.rawPlot.plot.selectAll("."+filter).filter(".circle").style("stroke", fillColor);
 		}
 		onOffLabel.style('color',fillColor);
-		params.periodPlot.plot.selectAll("."+filter).style("fill", fillColor);
-		params.amplitudePlot.plot.selectAll("."+filter).style("fill", fillColor);
+
 		params.phasePlot.plot.selectAll("."+filter).style("fill", fillColor);
 		params.phasePlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
 		params.rawPlot.plot.selectAll("."+filter).style("fill", fillColor);
 		params.rawPlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
+
+		params.featurePlots.forEach(function(p){
+			p.plot.selectAll("."+filter).classed("barSelected", false);
+			p.plot.selectAll("."+filter).style("fill", fillColor);
+		});		
+
+
+
 	});
 
 	//outlines on rects
-	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
-	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+	params.featurePlots.forEach(function(p){
+		p.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+	});
 
-	//length of period rects
-	var left = parseFloat(params.periodPlot.plot.select("defs").select("clipPath").select("rect").attr("x"));
+	//length of period rects (assuming that the period plot is always first!)
+	var left = parseFloat(params.featurePlots[0].plot.select("defs").select("clipPath").select("rect").attr("x"));
 
 	//console.log(period, params.periodPlot.xScale(+period))
-	var t = params.periodPlot.plot.transition().duration(params.tDuration);			
-	params.periodPlot.plot.selectAll(".bar-rect").transition(t)
-		.attr("width", function(d) {return params.periodPlot.xScale(+d.y*params.periodMultiple) - left;}) ;
+	var t = params.featurePlots[0].plot.transition().duration(params.tDuration);			
+	params.featurePlots[0].plot.selectAll(".bar-rect").transition(t)
+		.attr("width", function(d) {return params.featurePlots[0].xScale(+d.y*params.periodMultiple) - left;}) ;
 
 	d3.select("#multipleText").attr("value","="+params.periodMultiple)
 	d3.select("#multipleText").text("="+params.periodMultiple)
@@ -607,34 +610,24 @@ function createButtons(){
 		//link controls
 	params.inputData.filters.forEach(function(filt, j){
 		//select the period from the rect
-		params.periodPlot.plot.selectAll("."+filt)
-			.on('click',function(d){
-				params.ppos = j;
-				updateButtons();
-				updatePhasePlot();
-			})
-			// .on('contextmenu', function(){  //right click (easter egg drag to change period... not working yet :)
-			// 	d3.event.preventDefault();
-			// 	//console.log(d3.mouse(this)[0], d3.mouse(this)[1]);
-			// })
-			// .call(d3.drag().on('drag', function(){
-			// 	//console.log(d3.mouse(this)[0], d3.mouse(this)[1]);
-			// }));        	
-		params.amplitudePlot.plot.selectAll("."+filt)
-			.on('click',function(d){
-				params.ppos = j;
-				updateButtons();
-				updatePhasePlot();
-			});
+		params.featurePlots.forEach(function(p){
+
+			p.plot.selectAll("."+filt)
+				.on('click',function(d){
+					params.ppos = j;
+					updateButtons();
+					updatePhasePlot();
+				})
+		});
 
 		//on/off buttons 
-		var y = parseFloat(params.periodPlot.plot.select('.'+filt).attr("y")) -2;//why do I need the -2?
-		var h = parseFloat(params.periodPlot.plot.select('.'+filt).attr("height"))
+		var y = parseFloat(params.featurePlots[0].plot.select('.'+filt).attr("y")) //why do I need the -2?
+		var h = parseFloat(params.featurePlots[0].plot.select('.'+filt).attr("height"))
 		//https://www.w3schools.com/howto/howto_css_switch.asp
 		var onOffDiv = d3.select("#container").append("div")
 			.style('position','absolute')
-			.style('top',params.plotPositions.topPeriod + params.plotPositions.marginPeriod.top + y + 'px')
-			.style('left', params.plotPositions.leftPeriod + params.plotPositions.marginPeriod.left -2 + 'px')
+			.style('top',params.plotPositions.topFeature + params.plotPositions.marginFeature.top + y -2 + 'px')
+			.style('left', params.plotPositions.leftFeature + params.plotPositions.marginFeature.left -30 + 'px')
 		onOffDiv.append("input")
 			.attr("type","checkbox")
 			.attr("name","onOff"+filt)
@@ -659,7 +652,7 @@ function createButtons(){
 
 	var helpButton = d3.select("#container").append("div")
 		.attr('id','helpButton')
-		.attr('class','buttonDiv')
+		.attr('class','buttonDiv buttonDivUse')
 		.style('top',0)
 		.style('left',0)
 		.append("i")
@@ -667,7 +660,7 @@ function createButtons(){
 
 	var flipButton = d3.select("#container").append("div")
 		.attr('id','flipButton')
-		.attr('class','buttonDiv')
+		.attr('class','buttonDiv buttonDivUse')
 		.style('top',0)
 		.style('left',"50px")
 		.append("i")
@@ -679,7 +672,7 @@ function createButtons(){
 			.attr('type','text')
 			.attr('name','multipleText')
 			.attr('id','multipleText')
-			.attr('class','buttonDiv')
+			.attr('class','buttonDiv buttonDivUse')
 			.style('top',0)
 			.style('left',"200px")
 			.style('width',"100px")
@@ -741,7 +734,33 @@ function createButtons(){
 			});	
 		});
 
+	//outline for the feature plots
+	var featureBox = d3.select("#container").append("div")
+		.attr('id','featureBox')
+		.attr('class','buttonDiv')
+		.style('top',0)
+		.style('left',"300px")
+		.style('width',"530px")
+		.style('z-index',-1)
 
+	//button to switch features
+	var featureButton = d3.select("#container").append("div")
+		.attr('id','featureButton')
+		.attr('class','buttonDiv buttonDivUse')
+		.style('top',0)
+		.style('left',"830px")
+		.style('width',"50px")
+		.on('click',function(d){
+			params.fpos = (params.fpos + 1) % params.featurePlots.length;
+			params.featurePlots.forEach(function(p, i){
+				p.plot.classed("hidden", true);
+				if (i == params.fpos){
+					p.plot.classed("hidden", false);
+				}
+			})
+		})
+		.append("i")
+			.attr("class","far fa-arrow-alt-circle-right")
 }
 
 //////////////
@@ -851,17 +870,17 @@ function startPlotting(){
 	//reposition bottom label
 	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
-	params.periodPlot = createAxes(params.periodData, 
-								params.plotPositions.widthPeriod, 
-								params.plotPositions.heightPeriod, 
-								params.plotPositions.marginPeriod, 
+	var periodPlot = createAxes(params.periodData, 
+								params.plotPositions.widthFeature, 
+								params.plotPositions.heightFeature, 
+								params.plotPositions.marginFeature, 
 								"Period&rarr;", 
 								"", 
 								"periodPlot", 
-								topXlabel=true, 
+								topXlabel=false, 
 								rightYlabel=false, 
-								left=params.plotPositions.leftPeriod,
-								top=params.plotPositions.topPeriod, 
+								left=params.plotPositions.leftFeature,
+								top=params.plotPositions.topFeature, 
 								labelFontsize="12pt", 
 								axisFontsize="10pt",
 								xExtent = [0.1, 1000], 
@@ -869,42 +888,52 @@ function startPlotting(){
 								hideAllTicks = true,
 								xFormat = d3.scaleLog().base(10),
 								yFormat = d3.scaleLinear(),
-								nXticks = 4);					
-	createBarPlot(params.periodPlot, params.periodData, horizontal = true);
-	//hide some axes
-	params.periodPlot.gXbottom.classed("hidden",true)
-	params.periodPlot.gYleft.classed("hidden",true)
-	params.periodPlot.gYright.classed("hidden",true)
+								nXticks = 4);
 
-	params.amplitudePlot = createAxes(params.amplitudeData, 
-								params.plotPositions.widthAmplitude, 
-								params.plotPositions.heightAmplitude, 
-								params.plotPositions.marginAmplitude, 
-								"", 
+	createBarPlot(periodPlot, params.periodData, horizontal = true);
+	//hide some axes
+	periodPlot.gXtop.classed("hidden",true)
+	periodPlot.gYleft.classed("hidden",true)
+	periodPlot.gYright.classed("hidden",true)
+	//add to the params list
+	params.featurePlots.push(periodPlot)
+
+	var amplitudePlot = createAxes(params.amplitudeData, 
+								params.plotPositions.widthFeature, 
+								params.plotPositions.heightFeature, 
+								params.plotPositions.marginFeature, 
 								"Amplitude&rarr;", 
+								"", 
 								"amplitudePlot", 
 								topXlabel=false, 
 								rightYlabel=false, 
-								left=params.plotPositions.leftAmplitude,
-								top=params.plotPositions.topAmplitude, 
+								left=params.plotPositions.leftFeature,
+								top=params.plotPositions.topFeature, 
 								labelFontsize="12pt", 
 								axisFontsize="10pt",
-								xExtent = [0,params.amplitudeData.length], 
-								yExtent = [0.01, 10],
+								xExtent = [0.01, 10],
+								yExtent = [0,params.amplitudeData.length], 
 								hideAllTicks = true,
-								xFormat = d3.scaleLinear(),
-								yFormat = d3.scaleLog().base(10),
+								xFormat = d3.scaleLog().base(10),
+								yFormat = d3.scaleLinear(),
 								nXticks = 1,
 								nYticks = 3);					
-	createBarPlot(params.amplitudePlot, params.amplitudeData);
+	createBarPlot(amplitudePlot, params.amplitudeData, horizontal = true);
 	//hide some axes
-	params.amplitudePlot.gXtop.classed("hidden",true)
-	params.amplitudePlot.gXbottom.classed("hidden",true)
-	params.amplitudePlot.gYright.classed("hidden",true)
+	amplitudePlot.gXtop.classed("hidden",true)
+	amplitudePlot.gYleft.classed("hidden",true)
+	amplitudePlot.gYright.classed("hidden",true)
+	//add to the params list
+	params.featurePlots.push(amplitudePlot)
 
 	//initial outlines on the bars
-	params.periodPlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
-	params.amplitudePlot.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+	//also hide all the feature plots except for the first one
+	params.featurePlots.forEach(function(p, i){
+		p.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
+		if (i != params.fpos){
+			p.plot.classed("hidden", true);
+		}
+	});
 
 
 
