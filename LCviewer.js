@@ -5,7 +5,9 @@
 
 //could make a fun transition between feature plots (flying in/out from side)
 
-//flip is broken when zooming
+//add background color when flipped?, or maybe change the axes color?  
+
+//include data for phase outside of (-0.1,1.1), and gray those regions out
 
 //the params object holds all "global" variables
 var params;
@@ -665,8 +667,16 @@ function createButtons(){
 		.style('left',"50px")
 		.on('mousedown',function(d){
 			var domain = params.phasePlot.yScale.domain();
-			params.phasePlot.yScale.domain([domain[1], domain[0]]);
-			updatePhasePlot(tDur = 20);
+			params.phasePlot.yExtent = [domain[1], domain[0]]
+			params.phasePlot.yScale.domain(params.phasePlot.yExtent);
+			updatePlotData(params.phasePlot, tDur=20)
+
+			var domain = params.rawPlot.yScale.domain();
+			params.rawPlot.yExtent = [domain[1], domain[0]]
+			params.rawPlot.yScale.domain(params.rawPlot.yExtent);
+			updatePlotData(params.rawPlot, tDur=20)
+
+			//updatePhasePlot(tDur = 20);
 			var sel = d3.select("#flipButton").classed("buttonDivSelected")
 			d3.select("#flipButton").classed("buttonDivSelected", !sel)
 		})
