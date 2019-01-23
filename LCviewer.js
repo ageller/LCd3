@@ -1,7 +1,6 @@
 //see the look here, and match it? https://github.com/zooniverse/front-end-monorepo/pull/376
 
 //could use a full screen button?
-//need to fix input box to update after enter and then selection
 
 //could make a fun transition between feature plots (flying in/out from side)
 
@@ -21,8 +20,7 @@ function defineParams(){
 		//will store reformatted data (somewhat wasteful!)
 		this.rawData = [];
 		this.phaseData = [];
-		this.periodData = [];
-		this.amplitudeData = [];
+		this.featureData = {};
 
 		//will store plots
 		this.rawPlot;
@@ -833,21 +831,10 @@ function startPlotting(){
 	params.period = params.inputData[params.inputData.filters[params.ppos]].period;
 
 
+	//raw and phase data
 	params.inputData.filters.forEach(function(filter, j){
 
-		params.periodData.push({"x":j, 
-				"y":parseFloat(params.inputData[filter].period),
-				"ye":0.,
-				"color":params.inputData[filter].color,
-				"filter":filter
-			});
 
-		params.amplitudeData.push({"x":j, 
-				"y":parseFloat(params.inputData[filter].amplitude),
-				"ye":0.,
-				"color":params.inputData[filter].color,
-				"filter":filter
-			});
 
 		//reformat the data -- easier for plotting
 		params.inputData[filter].obsmjd.forEach(function(d, i){
@@ -890,8 +877,18 @@ function startPlotting(){
 		})
 
 	});
+	params.inputData.features.forEach(function(feature, j){
+		params.featureData[feature] = [];
+		params.inputData.filters.forEach(function(filter, j){
 
-
+			params.featureData[feature].push({"x":j, 
+					"y":parseFloat(params.inputData[filter][feature]),
+					"ye":0.,
+					"color":params.inputData[filter].color,
+					"filter":filter
+				});
+		});
+	});
 
 	params.phasePlot = createAxes(params.phaseData, 
 								params.plotPositions.widthPhase, 
@@ -981,61 +978,42 @@ function startPlotting(){
 	//reposition bottom label
 	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
-	var periodPlot = createAxes(params.periodData, 
-								params.plotPositions.widthFeature, 
-								params.plotPositions.heightFeature, 
-								params.plotPositions.marginFeature, 
-								"Period&rarr;", 
-								"", 
-								"periodPlot", 
-								topXlabel=false, 
-								rightYlabel=false, 
-								left=params.plotPositions.leftFeature,
-								top=params.plotPositions.topFeature, 
-								labelFontsize="12pt", 
-								axisFontsize="10pt",
-								xExtent = [0.1, 1000], 
-								yExtent = [0,params.periodData.length],
-								hideAllTicks = true,
-								xFormat = d3.scaleLog().base(10),
-								yFormat = d3.scaleLinear(),
-								nXticks = 4);
+	//features
+	params.inputData['features'].forEach(function(feature, i){
+		var xFormat = d3.scaleLinear();
+		if (params.inputData['featuresFormat'][i] == "log"){
+			xFormat = d3.scaleLog().base(10)
+		}
+		var featurePlot = createAxes(params.featureData[feature], 
+							params.plotPositions.widthFeature, 
+							params.plotPositions.heightFeature, 
+							params.plotPositions.marginFeature, 
+							feature+"&rarr;", 
+							"", 
+							feature+"Plot", 
+							topXlabel=false, 
+							rightYlabel=false, 
+							left=params.plotPositions.leftFeature,
+							top=params.plotPositions.topFeature, 
+							labelFontsize="12pt", 
+							axisFontsize="10pt",
+							xExtent = params.inputData['featuresRange'][i], 
+							yExtent = [0,params.featureData[feature].length],
+							hideAllTicks = true,
+							xFormat = xFormat,
+							yFormat = d3.scaleLinear(),
+							nXticks = 10);
 
-	createBarPlot(periodPlot, params.periodData, horizontal = true);
-	//hide some axes
-	periodPlot.gXtop.classed("hidden",true)
-	periodPlot.gYleft.classed("hidden",true)
-	periodPlot.gYright.classed("hidden",true)
-	//add to the params list
-	params.featurePlots.push(periodPlot)
+		createBarPlot(featurePlot, params.featureData[feature], horizontal = true);
+		//hide some axes
+		featurePlot.gXtop.classed("hidden",true)
+		featurePlot.gYleft.classed("hidden",true)
+		featurePlot.gYright.classed("hidden",true)
+		//add to the params list
+		params.featurePlots.push(featurePlot)
+	});
 
-	var amplitudePlot = createAxes(params.amplitudeData, 
-								params.plotPositions.widthFeature, 
-								params.plotPositions.heightFeature, 
-								params.plotPositions.marginFeature, 
-								"Amplitude&rarr;", 
-								"", 
-								"amplitudePlot", 
-								topXlabel=false, 
-								rightYlabel=false, 
-								left=params.plotPositions.leftFeature,
-								top=params.plotPositions.topFeature, 
-								labelFontsize="12pt", 
-								axisFontsize="10pt",
-								xExtent = [0.01, 10],
-								yExtent = [0,params.amplitudeData.length], 
-								hideAllTicks = true,
-								xFormat = d3.scaleLog().base(10),
-								yFormat = d3.scaleLinear(),
-								nXticks = 1,
-								nYticks = 3);					
-	createBarPlot(amplitudePlot, params.amplitudeData, horizontal = true);
-	//hide some axes
-	amplitudePlot.gXtop.classed("hidden",true)
-	amplitudePlot.gYleft.classed("hidden",true)
-	amplitudePlot.gYright.classed("hidden",true)
-	//add to the params list
-	params.featurePlots.push(amplitudePlot)
+
 
 	//initial outlines on the bars
 	//also hide all the feature plots except for the first one
