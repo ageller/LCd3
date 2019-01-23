@@ -587,7 +587,7 @@ function updateButtons(){
 	params.featurePlots[0].plot.selectAll(".bar-rect").transition(t)
 		.attr("width", function(d) {return params.featurePlots[0].xScale(+d.y*params.periodMultiple) - left;}) ;
 
-	d3.select("#multipleText").attr("value","="+params.periodMultiple)
+	d3.select("#multipleText").property("value","="+params.periodMultiple)
 	d3.select("#multipleText").text("="+params.periodMultiple)
 }
 
@@ -613,13 +613,6 @@ function updatePhasePlot(tDur = params.tDuration){
 		}
 		d.x = phaseNew;
 	});
-	// var lData = params.phasePlot.plot.selectAll("line").data();
-	// lData.forEach(function(d, j){
-	// 	if (d.mirrored){
-	// 	}else{
-	// 		d.x = (d.xRaw % params.period)/params.period; 
-	// 	}
-	// });
 
 	updatePlotData(params.phasePlot, tDur=tDur)
 
@@ -704,9 +697,11 @@ function createButtons(){
 		.append("i")
 			.attr("class","fas fa-arrows-alt-v")
 
-	var multipleBox = d3.select("#container").append("div")
+	var multipleBox = d3.select("#container").append("form")
 		.attr('id','multipleBox')
-		.append('input')
+		//.attr('action','text')
+		//.attr('method','post')
+	multipleBox.append('input')
 			.attr('type','text')
 			.attr('name','multipleText')
 			.attr('id','multipleText')
@@ -719,23 +714,25 @@ function createButtons(){
 			.style('border-left','none')
 			.attr('value',"="+params.inputData.multiples[params.mpos])
 			.text("="+params.inputData.multiples[params.mpos])
-	var elem = document.getElementById('multipleText');
-	elem.addEventListener('keypress', function(e){
-		if (e.keyCode == 13) {
-			value = elem.value;
-			if (value.slice(0,1) == "=") {
-				value = elem.value.slice(1)
-			}
-			console.log(value)
-			if (isNaN(value)){
-				value = params.periodMultiple;
-			} else {
-				params.periodMultiple = parseFloat(value); 
-			}
-			updateButtons();
-			updatePhasePlot();
-		}
-	});
+			.on("keypress", function(){
+				var e = d3.event;
+				if (e.keyCode == 13){
+					e.preventDefault();
+					value = this.value;
+					if (value.slice(0,1) == "=") {
+						value = this.value.slice(1)
+					}
+					console.log(value)
+					if (isNaN(value)){
+						value = params.periodMultiple;
+					} else {
+						params.periodMultiple = parseFloat(value); 
+					}
+					updateButtons();
+					updatePhasePlot();
+				}
+			})
+
 
 	//dropdown
 	var periodDropdown = d3.select("#container").append("div")
