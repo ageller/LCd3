@@ -600,12 +600,26 @@ function updatePhasePlot(tDur = params.tDuration){
 	params.period = params.inputData[params.inputData.filters[params.ppos]].period*params.periodMultiple;
 	var cData = params.phasePlot.plot.selectAll("circle").data();
 	cData.forEach(function(d, j){
-		d.x = (d.xRaw % params.period)/params.period; 
+		var phase = (d.xRaw % params.period)/params.period; 
+		var phaseNew = phase;
+
+		if (d.mirrored){
+			if (phase < params.phaseLim){
+				phaseNew = phase + 1;
+			}
+			if (phase > 1.-params.phaseLim){
+				phaseNew = phase - 1;
+			}
+		}
+		d.x = phaseNew;
 	});
-	var lData = params.phasePlot.plot.selectAll("line").data();
-	lData.forEach(function(d, j){
-		d.x = (d.xRaw % params.period)/params.period; 
-	});
+	// var lData = params.phasePlot.plot.selectAll("line").data();
+	// lData.forEach(function(d, j){
+	// 	if (d.mirrored){
+	// 	}else{
+	// 		d.x = (d.xRaw % params.period)/params.period; 
+	// 	}
+	// });
 
 	updatePlotData(params.phasePlot, tDur=tDur)
 
@@ -855,7 +869,8 @@ function startPlotting(){
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
 				"circleColor":params.inputData[filter].color, 
 				"errColor":params.inputData[filter].color,
-				"filter":filter
+				"filter":filter,
+				"mirrored":false,
 			});
 			if (phase < params.phaseLim){
 				phaseNew = phase + 1;
@@ -870,7 +885,8 @@ function startPlotting(){
 					"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
 					"circleColor":params.inputData[filter].color, 
 					"errColor":params.inputData[filter].color,
-					"filter":filter
+					"filter":filter,
+					"mirrored":true,
 				});	
 			}
 

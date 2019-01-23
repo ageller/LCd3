@@ -154,7 +154,7 @@ input[type=checkbox]:checked + label
 	margin:-2px;
 	padding:0px;
 	width: 100px;
-	background-color:rgba(0,0,0,0.1);
+	background-color:rgba(200,200,200,1);
 }
 .dropdown-content div {
 	width: 100px;
@@ -192,4 +192,5 @@ input[type=checkbox]:checked + label
 	display:block;
 	font-size:12px;
 	top:55px;
+	z-index:-1;
 }
