@@ -850,10 +850,32 @@ function createButtons(){
 		.on('click',function(d){
 			params.fpos = (params.fpos + 1) % params.featurePlots.length;
 			params.featurePlots.forEach(function(p, i){
-				p.plot.classed("hidden", true);
-				if (i == params.fpos){
-					p.plot.classed("hidden", false);
-				}
+				p.plot.classed("hidden", false);
+
+				var rects = p.plot.selectAll("rect")
+				var rectsX = parseFloat(rects.attr("x"))
+				var xtitle = p.plot.selectAll(".x-title")
+				var xtitleX = parseFloat(xtitle.attr("x"))
+				var xaxis = p.plot.selectAll(".axis-x-bottom")
+				var xaxisTrans = getTransformation(xaxis.attr("transform"))
+				var t = d3.transition().duration(params.tDuration);
+				xtitle.transition(t).attr("x",xtitleX + params.plotPositions.widthFeature)
+				xaxis.transition(t).attr("transform","translate("+ (xaxisTrans.translateX + params.plotPositions.widthFeature) +","+xaxisTrans.translateY+")")
+				rects.transition(t)
+					.attr("x",rectsX + params.plotPositions.widthFeature)
+					.on("end", function(){
+						if (p.plot.classed("hidden")){
+							rects.attr("x",rectsX - params.plotPositions.widthFeature)
+							xtitle.attr("x",xtitleX - params.plotPositions.widthFeature)
+							xaxis.transition(t).attr("transform","translate("+ (xaxisTrans.translateX - params.plotPositions.widthFeature) +","+xaxisTrans.translateY+")")
+
+						}
+						if (i != params.fpos){
+							p.plot.classed("hidden", true);
+						}
+					});
+
+
 			})
 		})
 		.append("i")
@@ -1062,7 +1084,16 @@ function startPlotting(){
 		p.plot.selectAll("."+params.inputData.filters[params.ppos]).classed("barSelected", true);
 		if (i != params.fpos){
 			p.plot.classed("hidden", true);
-		}
+			//setup for fly in/out on buttons
+			var rects = p.plot.selectAll('rect')
+			var rectsX = parseFloat(rects.attr("x"))
+			var xtitle = p.plot.selectAll(".x-title")
+			var xtitleX = parseFloat(xtitle.attr("x"))
+			var xaxis = p.plot.selectAll(".axis-x-bottom")
+			var xaxisTrans = getTransformation(xaxis.attr("transform"))
+			rects.attr("x",rectsX - params.plotPositions.widthFeature)
+			xtitle.attr("x",xtitleX - params.plotPositions.widthFeature)
+			xaxis.attr("transform","translate("+ (xaxisTrans.translateX - params.plotPositions.widthFeature) +","+xaxisTrans.translateY+")")		}
 	});
 
 
