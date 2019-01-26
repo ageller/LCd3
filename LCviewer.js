@@ -20,6 +20,7 @@ function defineParams(){
 		//will store reformatted data (somewhat wasteful!)
 		this.rawData = [];
 		this.phaseData = [];
+		this.CMDdata = [];
 		this.featureData = {};
 
 		//will store plots
@@ -127,46 +128,59 @@ function getTransformation(transform) {
 //////////////
 // add data to plot
 //////////////
-function addData(data, plot, xScale, yScale, r=3.5){
+function addData(data, plot, xScale, yScale, errorType="line"){
 	// Add Error Line
-	
-	var lines = plot.selectAll('.line').data(data).enter();
-	lines.append("line")
-		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", function(d) {return "line error-line "+d.filter})
-		.attr("x1", function(d) {return xScale(+d.x);})
-		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-		.attr("x2", function(d) {return xScale(+d.x);})
-		.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+	if (errorType == "line"){
+		var lines = plot.selectAll('.line').data(data).enter();
+		lines.append("line")
+			.style("stroke", function(d) {return d.errColor;})
+			.attr("class", function(d) {return "line error-line "+d.filter})
+			.attr("x1", function(d) {return xScale(+d.x);})
+			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return xScale(+d.x);})
+			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
 
-	// Add Error Top Cap
-	lines.append("line")
-		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", function(d) {return "line error-cap error-cap-top "+d.filter})
-		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-		.attr("y1", function(d) {return yScale(+d.y + d.ye);})
-		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-		.attr("y2", function(d) {return yScale(+d.y + d.ye);});
-		
-	// Add Error Bottom Cap
-	lines.append("line")
-		.style("stroke", function(d) {return d.errColor;})
-		.attr("class", function(d) {return "line error-cap error-cap-bottom "+d.filter})
-		.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
-		.attr("y1", function(d) {return yScale(+d.y - d.ye);})
-		.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
-		.attr("y2", function(d) {return yScale(+d.y - d.ye);});
-	
-	var circles = plot.selectAll('.circle').data(data).enter();
-	circles.append("circle")
-		.style("fill", function(d) {return d.circleColor;})
-		.attr("class", function(d) {return "dot circle "+d.filter})
-		.attr("r", r)
-		.attr("cx", function(d) { return xScale(+d.x); })
-		.attr("cy", function(d) { return yScale(+d.y); })
+		// Add Error Top Cap
+		lines.append("line")
+			.style("stroke", function(d) {return d.errColor;})
+			.attr("class", function(d) {return "line error-cap error-cap-top "+d.filter})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return yScale(+d.y + d.ye);});
+			
+		// Add Error Bottom Cap
+		lines.append("line")
+			.style("stroke", function(d) {return d.errColor;})
+			.attr("class", function(d) {return "line error-cap error-cap-bottom "+d.filter})
+			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
+			.attr("x2", function(d) {return xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return yScale(+d.y - d.ye);});
+
+		var circles = plot.selectAll('.circle').data(data).enter();
+		circles.append("circle")
+			.style("fill", function(d) {return d.circleColor;})
+			.attr("class", function(d) {return "dot circle "+d.filter})
+			.attr("r", function(d) {return d.r})
+			.attr("cx", function(d) { return xScale(+d.x); })
+			.attr("cy", function(d) { return yScale(+d.y); })
+	} else {
+		//elliptical errors
+		var circles = plot.selectAll('.ellipse').data(data).enter();
+		circles.append("ellipse")
+			.style("fill", function(d) {return d.circleColor;})
+			.attr("class", function(d) {return "dot circle "+d.filter})
+			.attr("rx", function(d) { return d.rx; })
+			.attr("ry", function(d) { return d.ry; })
+			.attr("cx", function(d) { return xScale(+d.x); })
+			.attr("cy", function(d) { return yScale(+d.y); })
+	}
+
+
 }
 
-function updatePlotData(plotObj, tDur = params.tDuration, r = params.r0){
+function updatePlotData(plotObj, tDur=params.tDuration, rScale=1.){
 
 	var t = d3.transition().duration(tDur);
 
@@ -175,25 +189,33 @@ function updatePlotData(plotObj, tDur = params.tDuration, r = params.r0){
 	plotObj.plot.select(".axis-x-bottom").transition(t).call(plotObj.xAxisBottom);
 	plotObj.plot.select(".axis-y-left").transition(t).call(plotObj.yAxisLeft);
 	plotObj.plot.select(".axis-y-right").transition(t).call(plotObj.yAxisRight);
-	plotObj.plot.selectAll("circle").transition(t)
-		.attr("cx", function(d) {return plotObj.xScale(+d.x); })
-		.attr("cy", function(d) {return plotObj.yScale(+d.y); })
-		.attr("r", r);
-	plotObj.plot.selectAll(".error-line").transition(t)
-		.attr("x1", function(d) {return plotObj.xScale(+d.x);})
-		.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
-		.attr("x2", function(d) {return plotObj.xScale(+d.x);})
-		.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
-	plotObj.plot.selectAll(".error-cap-top").transition(t)
-		.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
-		.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
-		.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
-		.attr("y2", function(d) {return plotObj.yScale(+d.y + d.ye);});
-	plotObj.plot.selectAll(".error-cap-bottom").transition(t)
-		.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
-		.attr("y1", function(d) {return plotObj.yScale(+d.y - d.ye);})
-		.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
-		.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+	if (plotObj.errorType == "line"){
+		plotObj.plot.selectAll("circle").transition(t)
+			.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+			.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+			.attr("r", function(d) {return rScale*d.r; });
+		plotObj.plot.selectAll(".error-line").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x);})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x);})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+		plotObj.plot.selectAll(".error-cap-top").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y + d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y + d.ye);});
+		plotObj.plot.selectAll(".error-cap-bottom").transition(t)
+			.attr("x1", function(d) {return plotObj.xScale(+d.x) - params.errLen;})
+			.attr("y1", function(d) {return plotObj.yScale(+d.y - d.ye);})
+			.attr("x2", function(d) {return plotObj.xScale(+d.x) + params.errLen;})
+			.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
+	} else {
+		plotObj.plot.selectAll("ellipse").transition(t)
+			.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+			.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+			.attr("rx", function(d) {return rScale*d.rx; })
+			.attr("ry", function(d) {return rScale*d.ry; });
+	}
 
 	//I would rather include this in updatePhasePlot, but this needs to work on zoom as well...
 	if (! plotObj.plot.select("#phaseBlockLeft").empty()){
@@ -374,9 +396,9 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 
 
 //////////////
-// create the scatter plot, with possibility of background image
+// create the scatter plot
 //////////////
-function createScatterPlot(plotObj, data, backgroundImage = null){
+function createScatterPlot(plotObj, data, errorType="line"){
 
 	var main = plotObj.plot.select(".main"),
 		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
@@ -386,15 +408,19 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 		left = parseFloat(rect.attr("x")),
 		top = parseFloat(rect.attr("y"));
 
+	plotObj.errorType = errorType;
 
 	//add the data (from external function)
-	addData(data, main, plotObj.xScale, plotObj.yScale);
+	addData(data, main, plotObj.xScale, plotObj.yScale, errorType=errorType);
 
 	//enable zooming
 	addBrushZoom(plotObj);
 
 }
 
+//////////////
+// zoom functionality, with possibility of a background image
+//////////////
 function addBrushZoom(plotObj){
 
 	var rect = plotObj.plot.select("defs").select("clipPath").select("rect");
@@ -454,9 +480,8 @@ function addBrushZoom(plotObj){
 			updatePlotImage(plotObj, s, translate, tDur = params.tDuration)
 		}
 
-		console.log(sX, scaleX, translate.scaleX)
 		//the data
-		updatePlotData(plotObj, tDur = params.tDuration, r = params.r0*sX);
+		updatePlotData(plotObj, tDur = params.tDuration, rScale = sX);
 
 		//flip any new ticks
 		var y2 = parseFloat(plotObj.gXtop.selectAll('.tick').selectAll('line').attr("y2"));
@@ -498,6 +523,7 @@ function addImageToPlot(plotObj, backgroundImage){
 			.attr("xlink:href", backgroundImage);
 	}
 }
+
 //////////////
 // update the size and location of image based on zoom
 //////////////
@@ -536,6 +562,7 @@ function updatePlotImage(plotObj, s, translate, tDur = params.tDuration){
 
 
 }
+
 //////////////
 // create the bar plot (for period and amplitude spines)
 //////////////
@@ -874,15 +901,16 @@ function startPlotting(){
 	params.period = params.inputData[params.inputData.filters[params.ppos]].period;
 
 
+	//reformat the data -- easier for plotting (though this is a bit of a waste of memory...)
+
 	//raw and phase data
 	params.inputData.filters.forEach(function(filter, j){
 
-
-		//reformat the data -- easier for plotting (though this is a bit of a waste of memory...)
 		params.inputData[filter].obsmjd.forEach(function(d, i){
 			params.rawData.push({"x":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),  
+				"r":params.r0,  
 				"circleColor":params.inputData[filter].color, 
 				"errColor":params.inputData[filter].color,
 				"filter":filter
@@ -893,6 +921,7 @@ function startPlotting(){
 				"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
+				"r":params.r0,  
 				"circleColor":params.inputData[filter].color, 
 				"errColor":params.inputData[filter].color,
 				"filter":filter,
@@ -909,6 +938,7 @@ function startPlotting(){
 					"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
 					"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
 					"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
+					"r":params.r0,  
 					"circleColor":params.inputData[filter].color, 
 					"errColor":params.inputData[filter].color,
 					"filter":filter,
@@ -919,13 +949,24 @@ function startPlotting(){
 		})
 
 	});
+	//CMD data
+	params.inputData.CMD.magErrPercentiles.forEach(function(m,j){
+		params.CMDdata.push({"x":params.inputData.CMD.color,
+				"y":params.inputData.CMD.mag,
+				"rx":params.inputData.CMD.magErrPercentiles[j],  
+				"ry":params.inputData.CMD.colorErrPercentiles[j],  
+				"circleColor":params.inputData.CMD.percentileColors[j],
+				"errColor":"none",
+				"filter":params.inputData.filters[params.ppos]});	
+	});
+
+	//feature data
 	params.inputData.features.forEach(function(feature, j){
 		params.featureData[feature] = [];
 		params.inputData.filters.forEach(function(filter, j){
 
 			params.featureData[feature].push({"x":j, 
 					"y":parseFloat(params.inputData[filter][feature]),
-					"ye":0.,
 					"color":params.inputData[filter].color,
 					"filter":filter
 				});
@@ -993,14 +1034,7 @@ function startPlotting(){
 	//reposition bottom label
 	params.rawPlot.plot.select(".x-title").attr("y",150);
 
-	//dummy data for now
-	var foo = [{"x":2,
-				"y":5,
-				"ye":1,
-				"circleColor":params.inputData[params.inputData.filters[params.ppos]].color,
-				"errColor":"none",
-				"filter":params.inputData.filters[params.ppos]}];
-	params.CMDPlot = createAxes(foo, 
+	params.CMDPlot = createAxes(params.CMDdata, 
 								params.plotPositions.widthCMD, 
 								params.plotPositions.heightCMD, 
 								params.plotPositions.marginCMD, 
@@ -1017,7 +1051,7 @@ function startPlotting(){
 								yExtent=[16.3, -3.263948750885376],
 								hideAllTicks = true);								 
 	addImageToPlot(params.CMDPlot, "data/CMDbackground_BW.svg")
-	createScatterPlot(params.CMDPlot, foo);
+	createScatterPlot(params.CMDPlot, params.CMDdata, errorType="elipse");
 	//reposition bottom label
 	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
