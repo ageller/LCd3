@@ -12,7 +12,7 @@ function defineParams(){
 		this.idleTimeout;
 		this.idleDelay = 350,
 		this.errLen = 4, //error cap
-		this.tDuration = 750;
+		this.tDuration = 500;
 
 		//will store the data from the file
 		this.inputData;
@@ -367,7 +367,8 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 			"gXtop":gXtop,
 			"gXbottom":gXbottom,
 			"gYright":gYright,
-			"gYleft":gYleft};
+			"gYleft":gYleft,
+			"image":null};
 
 }
 
@@ -376,7 +377,6 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 // create the scatter plot, with possibility of background image
 //////////////
 function createScatterPlot(plotObj, data, backgroundImage = null){
-
 
 	var main = plotObj.plot.select(".main"),
 		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
@@ -387,21 +387,22 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 		top = parseFloat(rect.attr("y"));
 
 
-
-	var image = null;
-	if (backgroundImage != null){
-		image = main.append("image")
-			.attr("width", width)
-			.attr("height", height)
-			.attr("x", left)
-			.attr("y", top)
-			.attr("xlink:href", backgroundImage);
-	}
-
 	//add the data (from external function)
 	addData(data, main, plotObj.xScale, plotObj.yScale);
 
+	//enable zooming
+	addBrushZoom(plotObj);
 
+}
+
+function addBrushZoom(plotObj){
+
+	var rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+
+	var	width = parseFloat(rect.attr("width")),
+		height = parseFloat(rect.attr("height")),
+		left = parseFloat(rect.attr("x")),
+		top = parseFloat(rect.attr("y"));
 
 	//brush + zoom from here : https://bl.ocks.org/mbostock/f48fcdb929a620ed97877e4678ab15e6
 	var brush = d3.brush().on("end", brushended);
@@ -427,13 +428,13 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 			plotObj.xScale.domain([plotObj.xScale.invert(s[0][0]), plotObj.xScale.invert(s[1][0])]);//.nice();
 			plotObj.yScale.domain([plotObj.yScale.invert(s[1][1]), plotObj.yScale.invert(s[0][1])]);//.nice();
 			plotObj.plot.select(".brush").call(brush.move, null);
-			// if (image != null){
-			// 	var trans = image.attr("transform");
-			// 	if (trans == ""){
-			// 		trans = null;
-			// 	}
-			// 	translate = getTransformation(trans)
-			// }
+			if (plotObj.image != null){
+				var trans = plotObj.image.attr("transform");
+				if (trans == ""){
+					trans = null;
+				}
+				translate = getTransformation(trans)
+			}
 
 		}
 		zoom(s, translate);
@@ -446,34 +447,15 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 	function zoom(s, translate) {
 		//the image
 		var sX = 1.
-		if (image != null){
+		if (plotObj.image != null){
 			var sWidth = s[1][0] - s[0][0];
-			var sHeight = s[1][1] - s[0][1];
-
-			//distance from the edge
-			var dEdgeX = s[0][0] - translate.translateX;
-			var dEdgeY = s[0][1] - translate.translateY;
-
-			//new scaling
 			var scaleX = width/sWidth;
-			var scaleY = height/sHeight;
-
-			//multiply by old scaling for total scaling
-			sX = scaleX*translate.scaleX;
-			var sY = scaleY*translate.scaleY;
-
-			//translation
-			var dx = left - dEdgeX*scaleX ;
-			var dy = top  - dEdgeY*scaleY ;
-
-			//now scale and translate the image
-			var t = d3.transition().duration(params.tDuration);
-			image.transition(t)
-				.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
-
-	
+		 	sX = scaleX*translate.scaleX;
+			updatePlotImage(plotObj, s, translate, tDur = params.tDuration)
 		}
 
+		console.log(sX, scaleX, translate.scaleX)
+		//the data
 		updatePlotData(plotObj, tDur = params.tDuration, r = params.r0*sX);
 
 		//flip any new ticks
@@ -490,9 +472,70 @@ function createScatterPlot(plotObj, data, backgroundImage = null){
 
 
 	}
+}
+//////////////
+// add a background image to a plot (e.g., for the CMD)
+//////////////
+function addImageToPlot(plotObj, backgroundImage){
+
+
+	var main = plotObj.plot.select(".main"),
+		rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+
+	var	width = parseFloat(rect.attr("width")),
+		height = parseFloat(rect.attr("height")),
+		left = parseFloat(rect.attr("x")),
+		top = parseFloat(rect.attr("y"));
+
+
+	plotObj.image = null;
+	if (backgroundImage != null){
+		plotObj.image = main.append("image")
+			.attr("width", width)
+			.attr("height", height)
+			.attr("x", left)
+			.attr("y", top)
+			.attr("xlink:href", backgroundImage);
+	}
+}
+//////////////
+// update the size and location of image based on zoom
+//////////////
+function updatePlotImage(plotObj, s, translate, tDur = params.tDuration){
+
+	var rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+
+	var width = parseFloat(rect.attr("width")),
+		height = parseFloat(rect.attr("height")),
+		left = parseFloat(rect.attr("x")),
+		top = parseFloat(rect.attr("y"));
+
+	var sWidth = s[1][0] - s[0][0];
+	var sHeight = s[1][1] - s[0][1];
+
+	//distance from the edge
+	var dEdgeX = s[0][0] - translate.translateX;
+	var dEdgeY = s[0][1] - translate.translateY;
+
+	//new scaling
+	var scaleX = width/sWidth;
+	var scaleY = height/sHeight;
+
+	//multiply by old scaling for total scaling
+	var sX = scaleX*translate.scaleX;
+	var sY = scaleY*translate.scaleY;
+
+	//translation
+	var dx = left - dEdgeX*scaleX ;
+	var dy = top  - dEdgeY*scaleY ;
+
+	//now scale and translate the image
+	var t = d3.transition().duration(params.tDuration);
+	plotObj.image.transition(t)
+		.attr("transform","translate(" + dx +  "," + dy + ")scale(" + sX + "," + sY +")")
+
 
 }
-
 //////////////
 // create the bar plot (for period and amplitude spines)
 //////////////
@@ -835,8 +878,7 @@ function startPlotting(){
 	params.inputData.filters.forEach(function(filter, j){
 
 
-
-		//reformat the data -- easier for plotting
+		//reformat the data -- easier for plotting (though this is a bit of a waste of memory...)
 		params.inputData[filter].obsmjd.forEach(function(d, i){
 			params.rawData.push({"x":parseFloat(params.inputData[filter].obsmjd[i]), 
 				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
@@ -974,7 +1016,8 @@ function startPlotting(){
 								xExtent = [-0.7644119, 4.715261459350586], 
 								yExtent=[16.3, -3.263948750885376],
 								hideAllTicks = true);								 
-	createScatterPlot(params.CMDPlot, foo, backgroundImage = "data/CMDbackground_BW.svg");
+	addImageToPlot(params.CMDPlot, "data/CMDbackground_BW.svg")
+	createScatterPlot(params.CMDPlot, foo);
 	//reposition bottom label
 	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
