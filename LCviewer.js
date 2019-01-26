@@ -644,8 +644,10 @@ function updateButtons(){
 
 	//length of period rects (assuming that the period plot is always first!)
 	var left = parseFloat(params.featurePlots[0].plot.select("defs").select("clipPath").select("rect").attr("x"));
+	if (params.featurePlots[0].plot.classed("hidden")){
+		left += params.plotPositions.widthFeature;
+	}
 
-	//console.log(period, params.periodPlot.xScale(+period))
 	var t = d3.transition().duration(params.tDuration);			
 	params.featurePlots[0].plot.selectAll(".bar-rect").transition(t)
 		.attr("width", function(d) {return params.featurePlots[0].xScale(+d.y*params.periodMultiple) - left;}) ;
@@ -785,7 +787,6 @@ function createButtons(){
 					if (value.slice(0,1) == "=") {
 						value = this.value.slice(1)
 					}
-					console.log(value)
 					if (isNaN(value)){
 						value = params.periodMultiple;
 					} else {
