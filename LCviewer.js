@@ -252,13 +252,14 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	xScale.domain(xExtent).nice();
 	yScale.domain(yExtent).nice();
 
+	//firefox doesn't seem to like multiple styles added in sequence, so I will create one string
 	var plot = d3.select("#container").append("svg")
 		.attr('class',className)
+		.style('top',top+"px")
 		.style('position', 'absolute')
-		.style('top',top)
-		.style('left',left)
-		.attr("width", (width + margin.left + margin.right))
-		.attr("height", (height + margin.top + margin.bottom))
+		.style('left',left+"px")
+		.attr("width", (width + margin.left + margin.right)+"px")
+		.attr("height", (height + margin.top + margin.bottom) + "px")
 		//.attr("transform", "translate(" + left + "," + top + ")")
 
 
@@ -266,10 +267,10 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	var clipPath = plot.append('defs').append("clipPath")
 		.attr("id","clip"+className);
 	var clip = clipPath.append('rect')
-		.attr("width", width)
-		.attr("height", height)
-		.attr("x",margin.left)
-		.attr("y",margin.top);
+		.attr("width", width+"px")
+		.attr("height", height+"px")
+		.attr("x",margin.left+"px")
+		.attr("y",margin.top+"px");
 
 	const main = plot.append('g')
 		.attr('class', 'main')
@@ -357,16 +358,16 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	}
 	plot.append("text")
 		.attr("class", "label x-title")
-		.attr("x", xXoffset)
-		.attr("y", xYoffset)
+		.attr("x", xXoffset+"px")
+		.attr("y", xYoffset+"px")
 		.style("text-anchor", "middle")
 		.style("font-size", labelFontsize)
 		.html(xTitle);
 	plot.append("text")
 		.attr("class", "label y-title")
 		.attr("transform", "rotate(-90)")
-		.attr("x", yXoffset)
-		.attr("y", yYoffset)
+		.attr("x", yXoffset+"px")
+		.attr("y", yYoffset+"px")
 		.style("text-anchor", "middle")
 		.style("font-size", labelFontsize)
 		.html(yTitle)
@@ -510,10 +511,10 @@ function addImageToPlot(plotObj, backgroundImage){
 	plotObj.image = null;
 	if (backgroundImage != null){
 		plotObj.image = main.append("image")
-			.attr("width", width)
-			.attr("height", height)
-			.attr("x", left)
-			.attr("y", top)
+			.attr("width", width+"px")
+			.attr("height", height+"px")
+			.attr("x", left+"px")
+			.attr("y", top+"px")
 			.attr("xlink:href", backgroundImage);
 	}
 }
