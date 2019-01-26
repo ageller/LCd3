@@ -17,12 +17,6 @@ function defineParams(){
 		//will store the data from the file
 		this.inputData;
 
-		//will store reformatted data (somewhat wasteful!)
-		this.rawData = [];
-		this.phaseData = [];
-		this.CMDdata = [];
-		this.featureData = {};
-
 		//will store plots
 		this.rawPlot;
 		this.phasePlot;
@@ -133,7 +127,7 @@ function addData(data, plot, xScale, yScale, errorType="line"){
 	if (errorType == "line"){
 		var lines = plot.selectAll('.line').data(data).enter();
 		lines.append("line")
-			.style("stroke", function(d) {return d.errColor;})
+			.style("stroke", function(d) {return d.c;})
 			.attr("class", function(d) {return "line error-line "+d.filter})
 			.attr("x1", function(d) {return xScale(+d.x);})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
@@ -142,7 +136,7 @@ function addData(data, plot, xScale, yScale, errorType="line"){
 
 		// Add Error Top Cap
 		lines.append("line")
-			.style("stroke", function(d) {return d.errColor;})
+			.style("stroke", function(d) {return d.c;})
 			.attr("class", function(d) {return "line error-cap error-cap-top "+d.filter})
 			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y + d.ye);})
@@ -151,7 +145,7 @@ function addData(data, plot, xScale, yScale, errorType="line"){
 			
 		// Add Error Bottom Cap
 		lines.append("line")
-			.style("stroke", function(d) {return d.errColor;})
+			.style("stroke", function(d) {return d.c;})
 			.attr("class", function(d) {return "line error-cap error-cap-bottom "+d.filter})
 			.attr("x1", function(d) {return xScale(+d.x) - params.errLen;})
 			.attr("y1", function(d) {return yScale(+d.y - d.ye);})
@@ -160,7 +154,7 @@ function addData(data, plot, xScale, yScale, errorType="line"){
 
 		var circles = plot.selectAll('.circle').data(data).enter();
 		circles.append("circle")
-			.style("fill", function(d) {return d.circleColor;})
+			.style("fill", function(d) {return d.c;})
 			.attr("class", function(d) {return "dot circle "+d.filter})
 			.attr("r", function(d) {return d.r})
 			.attr("cx", function(d) { return xScale(+d.x); })
@@ -169,7 +163,7 @@ function addData(data, plot, xScale, yScale, errorType="line"){
 		//elliptical errors
 		var circles = plot.selectAll('.ellipse').data(data).enter();
 		circles.append("ellipse")
-			.style("fill", function(d) {return d.circleColor;})
+			.style("fill", function(d) {return d.c;})
 			.attr("class", function(d) {return "dot circle "+d.filter})
 			.attr("rx", function(d) { return d.rx; })
 			.attr("ry", function(d) { return d.ry; })
@@ -580,7 +574,7 @@ function createBarPlot(plotObj, data, horizontal = false){
 		top = parseFloat(rect.attr("y"));
 
 	var bar = main.selectAll("bar").data(data).enter().append("rect");
-	bar.style("fill", function(d) {return d.color})
+	bar.style("fill", function(d) {return d.c})
 		.attr("class",function(d) {return "bar-rect "+d.filter})
 		.attr("rx",4)
 		.attr("ry",4);
@@ -829,7 +823,7 @@ function createButtons(){
 		dropdown.append('div')
 			.style('display','block')
 			.attr('value', params.inputData.multiples[j])
-			.html("&nbsp;" + params.inputData.mnames[j])
+			.html("&nbsp;" + params.inputData.multiplesNames[j])
 			.on('click',function(d){
 				params.periodMultiple = params.inputData.multiples[j];
 				updateButtons()
@@ -900,80 +894,48 @@ function startPlotting(){
 
 	params.period = params.inputData[params.inputData.filters[params.ppos]].period;
 
+	//add the phase data
+	params.inputData.phaseData = [];
+	params.inputData.rawData.forEach(function(d, i){
 
-	//reformat the data -- easier for plotting (though this is a bit of a waste of memory...)
-
-	//raw and phase data
-	params.inputData.filters.forEach(function(filter, j){
-
-		params.inputData[filter].obsmjd.forEach(function(d, i){
-			params.rawData.push({"x":parseFloat(params.inputData[filter].obsmjd[i]), 
-				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
-				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),  
-				"r":params.r0,  
-				"circleColor":params.inputData[filter].color, 
-				"errColor":params.inputData[filter].color,
-				"filter":filter
-			});
-			var phase = (parseFloat(params.inputData[filter].obsmjd[i]) % params.period)/params.period;
-			var phaseNew = null;
-			params.phaseData.push({"x": phase,
-				"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
-				"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
-				"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
-				"r":params.r0,  
-				"circleColor":params.inputData[filter].color, 
-				"errColor":params.inputData[filter].color,
-				"filter":filter,
-				"mirrored":false,
-			});
-			if (phase < params.phaseLim){
-				phaseNew = phase + 1;
-			}
-			if (phase > 1.-params.phaseLim){
-				phaseNew = phase - 1;
-			}
-			if (phaseNew != null){
-				params.phaseData.push({"x": phaseNew,
-					"xRaw":parseFloat(params.inputData[filter].obsmjd[i]), 
-					"y":parseFloat(params.inputData[filter].mag_autocorr_mean[i]), 
-					"ye":parseFloat(params.inputData[filter].magerr_auto[i]),
-					"r":params.r0,  
-					"circleColor":params.inputData[filter].color, 
-					"errColor":params.inputData[filter].color,
-					"filter":filter,
-					"mirrored":true,
-				});	
-			}
-
-		})
-
-	});
-	//CMD data
-	params.inputData.CMD.magErrPercentiles.forEach(function(m,j){
-		params.CMDdata.push({"x":params.inputData.CMD.color,
-				"y":params.inputData.CMD.mag,
-				"rx":params.inputData.CMD.magErrPercentiles[j],  
-				"ry":params.inputData.CMD.colorErrPercentiles[j],  
-				"circleColor":params.inputData.CMD.percentileColors[j],
-				"errColor":"none",
-				"filter":params.inputData.filters[params.ppos]});	
-	});
-
-	//feature data
-	params.inputData.features.forEach(function(feature, j){
-		params.featureData[feature] = [];
-		params.inputData.filters.forEach(function(filter, j){
-
-			params.featureData[feature].push({"x":j, 
-					"y":parseFloat(params.inputData[filter][feature]),
-					"color":params.inputData[filter].color,
-					"filter":filter
-				});
+		var phase = (parseFloat(d.x) % params.period)/params.period;
+		var phaseNew = null;
+		params.inputData.phaseData.push({"x": phase,
+			"xRaw":parseFloat(d.x), 
+			"y":parseFloat(d.y), 
+			"ye":parseFloat(d.ye),
+			"r":parseFloat(d.r),  
+			"c":d.c, 
+			"filter":d.filter,
+			"mirrored":false,
 		});
-	});
+		if (phase < params.phaseLim){
+			phaseNew = phase + 1;
+		}
+		if (phase > 1.-params.phaseLim){
+			phaseNew = phase - 1;
+		}
+		if (phaseNew != null){
+			params.inputData.phaseData.push({"x": phaseNew,
+				"xRaw":parseFloat(d.x), 
+				"y":parseFloat(d.y), 
+				"ye":parseFloat(d.ye),
+				"r":parseFloat(d.r),  
+				"c":d.c, 
+				"filter":d.filter,
+				"mirrored":true,
+			});	
+		}
 
-	params.phasePlot = createAxes(params.phaseData, 
+	})
+
+	//add a filter to CMD data so we don't get errors in plotting
+	// params.inputData.CMDdata.forEach(function(d,j){
+	// 	d["filter"] = params.inputData.filters[params.ppos];	
+	// });
+
+
+	params.phasePlot = createAxes(params.inputData.phaseData, 
 								params.plotPositions.widthPhase, 
 								params.plotPositions.heightPhase, 
 								params.plotPositions.marginPhase, 
@@ -986,7 +948,7 @@ function startPlotting(){
 								top=params.plotPositions.topPhase,
 								labelFontsize="18pt");
 	var main = params.phasePlot.plot.select(".main")
-	//var w = params.phasePlot.xScale(0) - params.plotPositions.marginPhase.left;
+	//add the gray blocks to the phase plot where it extends beyond 0-1
 	var w = (params.phasePlot.xScale(0) - params.phasePlot.xScale(-params.phaseLim) );
 	main.append('rect')
 		.attr("id","phaseBlockLeft")
@@ -1007,11 +969,11 @@ function startPlotting(){
 		.attr("width", "100%")
 		.attr("height", "100%")
 		.attr("fill", "none");
-	createScatterPlot(params.phasePlot, params.phaseData);
+	createScatterPlot(params.phasePlot, params.inputData.phaseData);
 	//reposition left label
 	params.phasePlot.plot.select(".y-title").attr("x",-310);
 
-	params.rawPlot = createAxes(params.rawData, 
+	params.rawPlot = createAxes(params.inputData.rawData, 
 								params.plotPositions.widthDays, 
 								params.plotPositions.heightDays, 
 								params.plotPositions.marginDays, 
@@ -1030,11 +992,11 @@ function startPlotting(){
 		.attr("width", "100%")
 		.attr("height", "100%")
 		.attr("fill", "none");
-	createScatterPlot(params.rawPlot, params.rawData);
+	createScatterPlot(params.rawPlot, params.inputData.rawData);
 	//reposition bottom label
 	params.rawPlot.plot.select(".x-title").attr("y",150);
 
-	params.CMDPlot = createAxes(params.CMDdata, 
+	params.CMDPlot = createAxes(params.inputData.CMDdata, 
 								params.plotPositions.widthCMD, 
 								params.plotPositions.heightCMD, 
 								params.plotPositions.marginCMD, 
@@ -1051,17 +1013,17 @@ function startPlotting(){
 								yExtent=[16.3, -3.263948750885376],
 								hideAllTicks = true);								 
 	addImageToPlot(params.CMDPlot, "data/CMDbackground_BW.svg")
-	createScatterPlot(params.CMDPlot, params.CMDdata, errorType="elipse");
+	createScatterPlot(params.CMDPlot, params.inputData.CMDdata, errorType="elipse");
 	//reposition bottom label
 	params.CMDPlot.plot.select(".x-title").attr("y",505);
 
 	//features
-	params.inputData['features'].forEach(function(feature, i){
+	params.inputData.features.forEach(function(feature, i){
 		var xFormat = d3.scaleLinear();
 		if (params.inputData['featuresFormat'][i] == "log"){
 			xFormat = d3.scaleLog().base(10)
 		}
-		var featurePlot = createAxes(params.featureData[feature], 
+		var featurePlot = createAxes(params.inputData.featureData[feature], 
 							params.plotPositions.widthFeature, 
 							params.plotPositions.heightFeature, 
 							params.plotPositions.marginFeature, 
@@ -1072,20 +1034,22 @@ function startPlotting(){
 							rightYlabel=false, 
 							left=params.plotPositions.leftFeature,
 							top=params.plotPositions.topFeature, 
-							labelFontsize="12pt", 
+							labelFontsize="12px", 
 							axisFontsize="10pt",
 							xExtent = params.inputData['featuresRange'][i], 
-							yExtent = [0,params.featureData[feature].length],
+							yExtent = [0,params.inputData.featureData[feature].length],
 							hideAllTicks = true,
 							xFormat = xFormat,
 							yFormat = d3.scaleLinear(),
 							nXticks = 10);
 
-		createBarPlot(featurePlot, params.featureData[feature], horizontal = true);
+		createBarPlot(featurePlot, params.inputData.featureData[feature], horizontal = true);
 		//hide some axes
 		featurePlot.gXtop.classed("hidden",true)
 		featurePlot.gYleft.classed("hidden",true)
 		featurePlot.gYright.classed("hidden",true)
+		//reposition bottom label
+		featurePlot.plot.select(".x-title").attr("y",66);
 		//add to the params list
 		params.featurePlots.push(featurePlot)
 	});
