@@ -256,7 +256,7 @@ function createAxes(data, width, height, margin, xTitle, yTitle, className, topX
 	var plot = d3.select("#container").append("svg")
 		.attr('class',className)
 		.style('top',top+"px")
-		.style('position', 'absolute')
+		//.style('position', 'absolute')
 		.style('left',left+"px")
 		.attr("width", (width + margin.left + margin.right)+"px")
 		.attr("height", (height + margin.top + margin.bottom) + "px")
