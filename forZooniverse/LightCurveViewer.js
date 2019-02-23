@@ -69,12 +69,16 @@ class LightCurveViewer extends Component{
 
 	constructor () {
     	super()
-		this.svgContainer = React.createRef()
+		this.svgContainer = React.createRef();
+
+		//colors for the plotting region
+		this.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--plot-background-color'); 
+		this.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--plot-border-color'); 
 
 		//settings for plots
 		this.idleTimeout;
-		this.idleDelay = 350,
-		this.errLen = 4, //error cap
+		this.idleDelay = 350;
+		this.errLen = 4; //error cap
 		this.tDuration = 500;
 
 		//will store the data from the file
@@ -134,7 +138,7 @@ class LightCurveViewer extends Component{
 		this.plotPositions.leftFeature = parseFloat(bbox.left)+335 + 5;
 		this.plotPositions.topFeature = bbox.top;
 		this.plotPositions.heightFeature = 50; 
-		this.plotPositions.widthFeature = parseFloat(bbox.width) - 385 - this.plotPositions.marginFeature.left - this.plotPositions.marginFeature.right;
+		this.plotPositions.widthFeature = parseFloat(bbox.width) - 393 - this.plotPositions.marginFeature.left - this.plotPositions.marginFeature.right; //I don't understand the 393 here: I thought it should be 385...
 
 
 
@@ -223,7 +227,7 @@ class LightCurveViewer extends Component{
 
 			var symbols = plot.selectAll('.symbol').data(data).enter();
 			symbols.append('path')
-				.attr('class', 'symbol')
+				.attr('class', function(d) {return 'symbol '+d.filter;})
 				.attr('d', function(d) {
 					return d3.symbol().type(d3['symbol'+d.s]).size(d.r)();
 				})
@@ -242,14 +246,102 @@ class LightCurveViewer extends Component{
 			// 	.attr("cy", function(d) { return yScale(+d.y); })
 		} else {
 			//elliptical errors
-			var circles = plot.selectAll('.ellipse').data(data).enter();
-			circles.append("ellipse")
+			// var arcs = plot.selectAll('.arc').data(data).enter();
+			// arcs.append('path')
+			// 	.attr('class', 'arc')
+			// 	.attr('d', function(d) {
+			// 		return d3.arc().innerRadius(0).outerRadius(xScale(+d.x+d.rxp) - xScale(+d.x)).startAngle(0).endAngle(Math.PI/2.)();
+			// 	})
+			// 	.attr('transform', function(d) { 
+			// 		return 'translate('+[xScale(+d.x),yScale(+d.y)]+')'
+			// 	})
+			// 	.style("fill", function(d) {return d.c;})
+			//  	.style("stroke", '#555555')
+
+
+
+
+			//I would rather include this in the defs, but that doesn't seem to work
+			//var clipPath = plot.select('defs').selectAll('.clipPathEllipse').data(data).enter();
+			var clipPath = plot.selectAll('.clipPathEllipse').data(data).enter();
+			var ellipses = plot.selectAll('.ellipse').data(data).enter();
+			var offset = 0.5; //for the clip path to allow for the stroke (which apparently is outside the ellipse)
+			//upper right
+			clipPath.append('clipPath')
+				.attr('class', 'clipPathEllipse ellipse-clipUR')
+				.attr("id", function(d,i) {return "ellipse-clipUR"+i})
+				.append('rect')
+					.attr("width", function(d) { return xScale(+d.x+d.rxp) - xScale(+d.x) + 2*offset; })
+					.attr("height", function(d) { return yScale(+d.y+d.ryp) - yScale(+d.y) + 2*offset; })
+					.attr("x", function(d) { return xScale(+d.x) - 1.*offset; })
+					.attr("y", function(d) { return yScale(+d.y-d.ryp) - 1.*offset; })
+			ellipses.append("ellipse")
 				.style("fill", function(d) {return d.c;})
-				.attr("class", function(d) {return "dot circle "+d.filter})
-				.attr("rx", function(d) { return d.rx; })
-				.attr("ry", function(d) { return d.ry; })
+				.style("stroke", '#555555')
+				.attr("class", function(d) {return "ellipseUR"})
+				.attr("rx", function(d) { return xScale(+d.x+d.rxp) - xScale(+d.x); })
+				.attr("ry", function(d) { return yScale(+d.y+d.ryp) - yScale(+d.y); })
 				.attr("cx", function(d) { return xScale(+d.x); })
 				.attr("cy", function(d) { return yScale(+d.y); })
+				.attr("clip-path",function(d,i) {return "url(#ellipse-clipUR"+i+")"})
+
+			//lower right
+			clipPath.append('clipPath')
+				.attr('class', 'clipPathEllipse ellipse-clipLR')
+				.attr("id", function(d,i) {return "ellipse-clipLR"+i})
+				.append('rect')
+					.attr("width", function(d) { return xScale(+d.x+d.rxp) - xScale(+d.x) + 2.*offset; })
+					.attr("height", function(d) { return yScale(+d.y+d.rym) - yScale(+d.y) + 2.*offset; })
+					.attr("x", function(d) { return xScale(+d.x) - 1.*offset; })
+					.attr("y", function(d) { return yScale(+d.y) - 1.*offset; })
+			ellipses.append("ellipse")
+				.style("fill", function(d) {return d.c;})
+				.style("stroke", '#555555')
+				.attr("class", function(d) {return "ellipseLR"})
+				.attr("rx", function(d) { return xScale(+d.x+d.rxp) - xScale(+d.x); })
+				.attr("ry", function(d) { return yScale(+d.y+d.rym) - yScale(+d.y); })
+				.attr("cx", function(d) { return xScale(+d.x); })
+				.attr("cy", function(d) { return yScale(+d.y); })
+				.attr("clip-path",function(d,i) {return "url(#ellipse-clipLR"+i+")"})
+
+			//upper left
+			clipPath.append('clipPath')
+				.attr('class', 'clipPathEllipse ellipse-clipUL')
+				.attr("id", function(d,i) {return "ellipse-clipUL"+i})
+				.append('rect')
+					.attr("width", function(d) { return xScale(+d.x+d.rxm) - xScale(+d.x) + 2.*offset; })
+					.attr("height", function(d) { return yScale(+d.y+d.ryp) - yScale(+d.y) + 2.*offset; })
+					.attr("x", function(d) { return xScale(+d.x-d.rxm) - 1.*offset; })
+					.attr("y", function(d) { return yScale(+d.y-d.ryp) - 1.*offset; })
+			ellipses.append("ellipse")
+				.style("fill", function(d) {return d.c;})
+				.style("stroke", '#555555')
+				.attr("class", function(d) {return "ellipseUL"})
+				.attr("rx", function(d) { return xScale(+d.x+d.rxm) - xScale(+d.x); })
+				.attr("ry", function(d) { return yScale(+d.y+d.ryp) - yScale(+d.y); })
+				.attr("cx", function(d) { return xScale(+d.x); })
+				.attr("cy", function(d) { return yScale(+d.y); })
+				.attr("clip-path",function(d,i) {return "url(#ellipse-clipUL"+i+")"})
+
+			//lower left
+			clipPath.append('clipPath')
+				.attr('class', 'clipPathEllipse ellipse-clipLL')
+				.attr("id", function(d,i) {return "ellipse-clipLL"+i})
+				.append('rect')
+					.attr("width", function(d) { return xScale(+d.x+d.rxm) - xScale(+d.x) + 2.*offset; })
+					.attr("height", function(d) { return yScale(+d.y+d.rym) - yScale(+d.y) + 2.*offset; })
+					.attr("x", function(d) { return xScale(+d.x-d.rxm) - 1.*offset; })
+					.attr("y", function(d) { return yScale(+d.y) - 1.*offset; })
+			ellipses.append("ellipse")
+				.style("fill", function(d) {return d.c;})
+				.style("stroke", '#555555')
+				.attr("class", function(d) {return "ellipseLL"})
+				.attr("rx", function(d) { return xScale(+d.x+d.rxm) - xScale(+d.x); })
+				.attr("ry", function(d) { return yScale(+d.y+d.rym) - yScale(+d.y); })
+				.attr("cx", function(d) { return xScale(+d.x); })
+				.attr("cy", function(d) { return yScale(+d.y); })
+				.attr("clip-path",function(d,i) {return "url(#ellipse-clipLL"+i+")"})
+
 		}
 
 
@@ -258,7 +350,7 @@ class LightCurveViewer extends Component{
 	updatePlotData(plotObj, tDur, rScale){
 
 		var t = d3.transition().duration(tDur);
-
+		var offset = 0.5;
 		//the points
 		plotObj.plot.select(".axis-x-top").transition(t).call(plotObj.xAxisTop);
 		plotObj.plot.select(".axis-x-bottom").transition(t).call(plotObj.xAxisBottom);
@@ -290,11 +382,50 @@ class LightCurveViewer extends Component{
 			// 	.attr("x2", function(d) {return plotObj.xScale(+d.x) + this.errLen;}.bind(this))
 			// 	.attr("y2", function(d) {return plotObj.yScale(+d.y - d.ye);});
 		} else {
-			plotObj.plot.selectAll("ellipse").transition(t)
+			//upper right
+			plotObj.plot.selectAll(".ellipse-clipUR").select('rect').transition(t)
+				.attr("width", function(d) { return plotObj.xScale(+d.x+d.rxp) - plotObj.xScale(+d.x) + 2.*offset; })
+				.attr("height", function(d) { return plotObj.yScale(+d.y+d.ryp) - plotObj.yScale(+d.y) + 2.*offset; })
+				.attr("x", function(d) { return plotObj.xScale(+d.x) - 1.*offset; })
+				.attr("y", function(d) { return plotObj.yScale(+d.y-d.ryp) - 1.*offset; })
+			plotObj.plot.selectAll(".ellipseUR").transition(t)
 				.attr("cx", function(d) {return plotObj.xScale(+d.x); })
 				.attr("cy", function(d) {return plotObj.yScale(+d.y); })
-				.attr("rx", function(d) {return rScale*d.rx; })
-				.attr("ry", function(d) {return rScale*d.ry; });
+				.attr("rx", function(d) { return plotObj.xScale(+d.x+d.rxp) - plotObj.xScale(+d.x); })
+				.attr("ry", function(d) { return plotObj.yScale(+d.y+d.ryp) - plotObj.yScale(+d.y); })
+			//lower right
+			plotObj.plot.selectAll(".ellipse-clipLR").select('rect').transition(t)
+				.attr("width", function(d) { return plotObj.xScale(+d.x+d.rxp) - plotObj.xScale(+d.x) + 2.*offset; })
+				.attr("height", function(d) { return plotObj.yScale(+d.y+d.rym) - plotObj.yScale(+d.y) + 2.*offset; })
+				.attr("x", function(d) { return plotObj.xScale(+d.x) - 1.*offset; })
+				.attr("y", function(d) { return plotObj.yScale(+d.y) - 1.*offset; })
+			plotObj.plot.selectAll(".ellipseLR").transition(t)
+				.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+				.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+				.attr("rx", function(d) { return plotObj.xScale(+d.x+d.rxp) - plotObj.xScale(+d.x); })
+				.attr("ry", function(d) { return plotObj.yScale(+d.y+d.rym) - plotObj.yScale(+d.y); })
+			//upper left
+			plotObj.plot.selectAll(".ellipse-clipUL").select('rect').transition(t)
+				.attr("width", function(d) { return plotObj.xScale(+d.x+d.rxm) - plotObj.xScale(+d.x) + 2.*offset; })
+				.attr("height", function(d) { return plotObj.yScale(+d.y+d.ryp) - plotObj.yScale(+d.y) + 2.*offset; })
+				.attr("x", function(d) { return plotObj.xScale(+d.x-d.rxm) - 1.*offset; })
+				.attr("y", function(d) { return plotObj.yScale(+d.y-d.ryp) - 1.*offset; })
+			plotObj.plot.selectAll(".ellipseUL").transition(t)
+				.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+				.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+				.attr("rx", function(d) { return plotObj.xScale(+d.x+d.rxm) - plotObj.xScale(+d.x); })
+				.attr("ry", function(d) { return plotObj.yScale(+d.y+d.ryp) - plotObj.yScale(+d.y); })
+			//lower left
+			plotObj.plot.selectAll(".ellipse-clipLL").select('rect').transition(t)
+				.attr("width", function(d) { return plotObj.xScale(+d.x+d.rxm) - plotObj.xScale(+d.x) + 2.*offset; })
+				.attr("height", function(d) { return plotObj.yScale(+d.y+d.rym) - plotObj.yScale(+d.y) + 2.*offset; })
+				.attr("x", function(d) { return plotObj.xScale(+d.x-d.rxm) - 1.*offset; })
+				.attr("y", function(d) { return plotObj.yScale(+d.y) - 1.*offset; })
+			plotObj.plot.selectAll(".ellipseLL").transition(t)
+				.attr("cx", function(d) {return plotObj.xScale(+d.x); })
+				.attr("cy", function(d) {return plotObj.yScale(+d.y); })
+				.attr("rx", function(d) { return plotObj.xScale(+d.x+d.rxm) - plotObj.xScale(+d.x); })
+				.attr("ry", function(d) { return plotObj.yScale(+d.y+d.rym) - plotObj.yScale(+d.y); })
 		}
 
 		//I would rather include this in updatePhasePlot, but this needs to work on zoom as well...
@@ -350,7 +481,8 @@ class LightCurveViewer extends Component{
 
 		//https://bl.ocks.org/jarandaf/df3e58e56e9d0d3b9adb
 		var clipPath = plot.append('defs').append("clipPath")
-			.attr("id","clip"+className);
+			.attr("id","clip"+className)
+			.attr("class","clipPathMain");
 		var clip = clipPath.append('rect')
 			.attr("width", width+"px")
 			.attr("height", height+"px")
@@ -361,6 +493,14 @@ class LightCurveViewer extends Component{
 			.attr('class', 'main')
 			.attr('clip-path', 'url(#clip'+className+')');
 
+		//white background for plot
+		main.append('rect')
+			.attr("id","backgroundFill")
+			.attr("width", width+"px")
+			.attr("height", height+"px")
+			.attr("x",margin.left+"px")
+			.attr("y",margin.top+"px")
+			.attr("fill", "white");
 
 		//axes
 		var gXbottom = plot.append("g")
@@ -589,7 +729,7 @@ class LightCurveViewer extends Component{
 
 
 		var main = plotObj.plot.select(".main"),
-			rect = plotObj.plot.select("defs").select("clipPath").select("rect");
+			rect = plotObj.plot.select("defs").select(".clipPathMain").select("rect");
 
 		var	width = parseFloat(rect.attr("width")),
 			height = parseFloat(rect.attr("height")),
@@ -609,8 +749,8 @@ class LightCurveViewer extends Component{
 
 			plotObj.image = main.append("div")
 				.attr("id","CMDimage")
-				.attr("width", width/this.totalWidth*100+"%")
-				.attr("height", height/this.totalHeight*100+"%")
+			 	.attr("width", width+"px")
+			 	.attr("height", height+"px")
 				.attr("left", left+"px")
 				.attr("top", top+"px")
 				//.append(CMDimage)
@@ -712,19 +852,19 @@ class LightCurveViewer extends Component{
 			var lineColor = this.inputData[filter].color;
 			if (onOff.property('checked')){
 				onOffLabel.select("i").text("visibility")
-				this.phasePlot.plot.selectAll("."+filter).filter(".circle").style("stroke", "black");
-				this.phasePlot.plot.selectAll("."+filter).filter(".circle").raise();
-				this.rawPlot.plot.selectAll("."+filter).filter(".circle").style("stroke", "black");
-				this.rawPlot.plot.selectAll("."+filter).filter(".circle").raise();
+				this.phasePlot.plot.selectAll("."+filter).filter(".symbol").style("stroke", '#555555');
+				this.phasePlot.plot.selectAll("."+filter).filter(".symbol").raise();
+				this.rawPlot.plot.selectAll("."+filter).filter(".symbol").style("stroke", '#555555');
+				this.rawPlot.plot.selectAll("."+filter).filter(".symbol").raise();
 			} else {
 				fillColor = "lightgray";
 				onOffLabel.select("i").text("visibility_off")
-				this.phasePlot.plot.selectAll("."+filter).filter(".circle").style("stroke", fillColor);
-				this.rawPlot.plot.selectAll("."+filter).filter(".circle").style("stroke", fillColor);
+				this.phasePlot.plot.selectAll("."+filter).filter(".symbol").style("stroke", fillColor);
+				this.rawPlot.plot.selectAll("."+filter).filter(".symbol").style("stroke", fillColor);
 			}
 			onOffLabel.style('color',fillColor);
 
-			this.phasePlot.plot.selectAll("."+filter).style("fill", fillColor);
+			this.phasePlot.plot.selectAll("."+filter).filter(".symbol").style("fill", fillColor);
 			this.phasePlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
 			this.rawPlot.plot.selectAll("."+filter).style("fill", fillColor);
 			this.rawPlot.plot.selectAll("."+filter).filter(".line").style("stroke", fillColor);
@@ -764,7 +904,7 @@ class LightCurveViewer extends Component{
 
 		var periodOld = this.period;
 		this.period = this.inputData[this.inputData.filters[this.ppos]].period*this.periodMultiple;
-		var cData = this.phasePlot.plot.selectAll("circle").data();
+		var cData = this.phasePlot.plot.selectAll(".symbol").data();
 		cData.forEach(function(d, j){
 			var phase = (d.xRaw % this.period)/this.period; 
 			var phaseNew = phase;
@@ -810,6 +950,7 @@ class LightCurveViewer extends Component{
 				.style('position','absolute')
 				.style('top',this.plotPositions.topFeature + this.plotPositions.marginFeature.top + y -2 + 'px')
 				.style('left', this.plotPositions.leftFeature + this.plotPositions.marginFeature.left -30 + 'px')
+				.style('z-index',1)
 				.attr('id','onOffButton')
 			onOffButton.append("input")
 				.attr("type","checkbox")
@@ -838,6 +979,7 @@ class LightCurveViewer extends Component{
 			.attr('class','buttonDiv buttonDivUse')
 			.style('top',bbox.top)
 			.style('left',bbox.left)
+			.style('border-left','none')
 			.append("i")
 				.attr("class","buttonText material-icons")
 				.text("help_outline")
@@ -880,6 +1022,7 @@ class LightCurveViewer extends Component{
 			.style('text-align',"left")
 			.style('padding',0)
 			.style('border-left','none')
+			.style('border-top','none')
 			.attr('value',"="+this.inputData.multiples[this.mpos])
 			.text("="+this.inputData.multiples[this.mpos])
 			.on("keypress", function(){
@@ -909,6 +1052,7 @@ class LightCurveViewer extends Component{
 			.style('top',bbox.top)
 			.style('left',bbox.left + 100 + "px")
 			.style('border-right','none')
+			.style('border-top','none')
 			.text("Period Multiple")
 			.append("div")
 				.attr("id","periodDropdown")
@@ -952,8 +1096,8 @@ class LightCurveViewer extends Component{
 			.attr('class','buttonDiv')
 			.style('top',bbox.top)
 			.style('left',parseFloat(bbox.left)+300+"px") 
-			.style('width',28 + this.plotPositions.widthFeature + this.plotPositions.marginFeature.left + this.plotPositions.marginFeature.right + "px") // 2 pixels less than I expected??
-			.style('z-index',-1)
+			.style('width',40 + this.plotPositions.widthFeature + this.plotPositions.marginFeature.left + this.plotPositions.marginFeature.right + "px") // 5 pixels more than I expected, probably due to borders??
+			.style('background-color',getComputedStyle(document.documentElement).getPropertyValue('--button-background-color'))
 
 		//button to switch features
 		var featureButton = d3.select(this.svgContainer.current).append("div")
@@ -962,6 +1106,7 @@ class LightCurveViewer extends Component{
 			.style('top',bbox.top)
 			.style('left',parseFloat(featureBox.style('left'))+parseFloat(featureBox.style('width')) + "px")
 			.style('width',"50px")
+			.style('border-right','none')
 			.on('click',function(d){
 				this.fpos = (this.fpos + 1) % this.featurePlots.length;
 				this.featurePlots.forEach(function(p, i){
@@ -1045,6 +1190,10 @@ class LightCurveViewer extends Component{
 
 		console.log("props", this.props)
 		this.period = this.inputData[this.inputData.filters[this.ppos]].period;
+
+		//set the background
+		d3.select(this.svgContainer.current).style('background-color',this.backgroundColor)
+		d3.select(this.svgContainer.current).style('border','1px solid '+this.borderColor)
 
 		//add the phase data
 		this.inputData.phaseData = [];
@@ -1165,7 +1314,7 @@ class LightCurveViewer extends Component{
 									[16.3, -3.263948750885376],
 									true, d3.scaleLinear(), d3.scaleLinear(), 5, 5);								 
 		this.addImageToPlot(this.CMDPlot, CMDimage)
-		this.createScatterPlot(this.CMDPlot, this.inputData.CMDdata, "elipse");
+		this.createScatterPlot(this.CMDPlot, this.inputData.CMDdata, "ellipse");
 		//reposition bottom label
 		var y = parseFloat(this.rawPlot.plot.select(".x-title").attr("y")) + this.plotPositions.heightPhase + this.plotPositions.marginPhase.top + + this.plotPositions.marginDays.top;
 		this.CMDPlot.plot.select(".x-title").attr("y",y+"px");
@@ -1197,6 +1346,7 @@ class LightCurveViewer extends Component{
 								10, 5);
 
 			this.createBarPlot(featurePlot, this.inputData.featureData[feature], true);
+			featurePlot.plot.style('z-index',1) //to place it on top of the fature box
 			//hide some axes
 			featurePlot.gXtop.classed("hidden",true)
 			featurePlot.gYleft.classed("hidden",true)
@@ -1204,6 +1354,7 @@ class LightCurveViewer extends Component{
 			//reposition bottom label
 			featurePlot.plot.select(".x-title").attr("y",66);
 			//add to the params list
+
 			this.featurePlots.push(featurePlot)
 		}.bind(this));
 
