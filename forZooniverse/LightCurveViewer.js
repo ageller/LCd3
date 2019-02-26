@@ -70,6 +70,13 @@ class LightCurveViewer extends Component{
 	constructor () {
     	super()
 		this.svgContainer = React.createRef();
+		this.container = this.svgContainer.current;
+		
+		//will store the data from the file
+		//this does not work (trying to load from the .spec.js file)
+		//this.inputData = this.props.inputData;
+		this.inputData = data;
+		this.CMDImage = CMDimage;
 
 		//colors for the plotting region
 		this.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--plot-background-color'); 
@@ -80,11 +87,6 @@ class LightCurveViewer extends Component{
 		this.idleDelay = 350;
 		this.errLen = 4; //error cap
 		this.tDuration = 500;
-
-		//will store the data from the file
-		//this does not work (trying to load from the .spec.js file)
-		//this.inputData = this.props.inputData;
-		this.inputData = data;
 
 		//will store plots
 		this.rawPlot;
@@ -469,7 +471,7 @@ class LightCurveViewer extends Component{
 		xScale.domain(xExtent).nice();
 		yScale.domain(yExtent).nice();
 
-		var plot = d3.select(this.svgContainer.current).append("svg")
+		var plot = d3.select(this.container).append("svg")
 			.attr('class',className)
 			.style('position', 'absolute')
 			.style('top',top + "px")
@@ -486,8 +488,8 @@ class LightCurveViewer extends Component{
 		var clip = clipPath.append('rect')
 			.attr("width", width+"px")
 			.attr("height", height+"px")
-			.attr("x",margin.left+"px")
-			.attr("y",margin.top+"px");
+			.attr("x",margin.left)
+			.attr("y",margin.top);
 
 		const main = plot.append('g')
 			.attr('class', 'main')
@@ -498,8 +500,8 @@ class LightCurveViewer extends Component{
 			.attr("id","backgroundFill")
 			.attr("width", width+"px")
 			.attr("height", height+"px")
-			.attr("x",margin.left+"px")
-			.attr("y",margin.top+"px")
+			.attr("x",margin.left)
+			.attr("y",margin.top)
 			.attr("fill", "white");
 
 		//axes
@@ -584,16 +586,16 @@ class LightCurveViewer extends Component{
 		}
 		plot.append("text")
 			.attr("class", "label x-title")
-			.attr("x", xXoffset+"px")
-			.attr("y", xYoffset+"px")
+			.attr("x", xXoffset)
+			.attr("y", xYoffset)
 			.style("text-anchor", "middle")
 			.style("font-size", labelFontsize)
 			.html(xTitle);
 		plot.append("text")
 			.attr("class", "label y-title")
 			.attr("transform", "rotate(-90)")
-			.attr("x", yXoffset+"px")
-			.attr("y", yYoffset+"px")
+			.attr("x", yXoffset)
+			.attr("y", yYoffset)
 			.style("text-anchor", "middle")
 			.style("font-size", labelFontsize)
 			.html(yTitle)
@@ -614,7 +616,6 @@ class LightCurveViewer extends Component{
 				"image":null};
 
 	}
-
 
 	//////////////
 	// create the scatter plot
@@ -740,25 +741,28 @@ class LightCurveViewer extends Component{
 		plotObj.image = null;
 		if (backgroundImage != null){
 
-			// plotObj.image = main.append("image")
-			// 	.attr("width", width+"px")
-			// 	.attr("height", height+"px")
+			plotObj.image = main.append("image")
+				.attr("width", width+"px")
+				.attr("height", height+"px")
+				.attr("x", left+"px")
+				.attr("y", top+"px")
+				.attr("xlink:href",backgroundImage)
+				//.attr("xlink:href","./input/CMDbackground_BW.svg")
+				//.attr("src", backgroundImage);
+
+			// plotObj.image = main.append("rect")
+			// 	.attr("id","CMDimage")
+			//  	.attr("width", width+"px")
+			//  	.attr("height", height+"px")
 			// 	.attr("x", left+"px")
 			// 	.attr("y", top+"px")
-			// 	.attr("src", backgroundImage);
+			// 	.attr("fill",'none')
+			// 	//.append(CMDimage)
+			// 	// .append("svg")
+			// 	// 	.attr("src", CMDimage);
 
-			plotObj.image = main.append("div")
-				.attr("id","CMDimage")
-			 	.attr("width", width+"px")
-			 	.attr("height", height+"px")
-				.attr("left", left+"px")
-				.attr("top", top+"px")
-				//.append(CMDimage)
-				// .append("svg")
-				// 	.attr("src", CMDimage);
-
-			var elem = document.getElementById("CMDimage")
-			elem.innerHTML = backgroundImage;
+			// var elem = document.getElementById("CMDimage")
+			// elem.innerHTML = backgroundImage;
 		}
 	}
 
@@ -946,7 +950,7 @@ class LightCurveViewer extends Component{
 			var y = parseFloat(this.featurePlots[0].plot.select('.'+filt).attr("y")) //why do I need the -2?
 			var h = parseFloat(this.featurePlots[0].plot.select('.'+filt).attr("height"))
 			//https://www.w3schools.com/howto/howto_css_switch.asp
-			var onOffButton = d3.select(this.svgContainer.current).append("div")
+			var onOffButton = d3.select(this.container).append("div")
 				.style('position','absolute')
 				.style('top',this.plotPositions.topFeature + this.plotPositions.marginFeature.top + y -2 + 'px')
 				.style('left', this.plotPositions.leftFeature + this.plotPositions.marginFeature.left -30 + 'px')
@@ -974,7 +978,7 @@ class LightCurveViewer extends Component{
 					.style("font-size",h+"px")
 		}.bind(this));
 
-		var helpButton = d3.select(this.svgContainer.current).append("div")
+		var helpButton = d3.select(this.container).append("div")
 			.attr('id','helpButton')
 			.attr('class','buttonDiv buttonDivUse')
 			.style('top',bbox.top)
@@ -985,7 +989,7 @@ class LightCurveViewer extends Component{
 				.text("help_outline")
 
 
-		var flipButton = d3.select(this.svgContainer.current).append("div")
+		var flipButton = d3.select(this.container).append("div")
 			.attr('id','flipButton')
 			.attr('class','buttonDiv buttonDivUse')
 			.style('top',bbox.top)
@@ -1008,7 +1012,7 @@ class LightCurveViewer extends Component{
 				.attr("class","buttonText material-icons")
 				.text("swap_vert")
 
-		var multipleBox = d3.select(this.svgContainer.current).append("form")
+		var multipleBox = d3.select(this.container).append("form")
 			.attr('id','multipleBox')
 		var value = ""
 		multipleBox.append('input')
@@ -1046,7 +1050,7 @@ class LightCurveViewer extends Component{
 
 
 		//dropdown
-		var periodDropdown = d3.select(this.svgContainer.current).append("div")
+		var periodDropdown = d3.select(this.container).append("div")
 			.attr('id','periodControl')
 			.attr('class','dropdown')
 			.style('top',bbox.top)
@@ -1082,7 +1086,7 @@ class LightCurveViewer extends Component{
 			}.bind(this));
 
 		//outline for the On/Off buttons
-		// var onOffDiv = d3.select(this.svgContainer.current).append("div")
+		// var onOffDiv = d3.select(this.container).append("div")
 		// 	.attr('id','onOffDiv')
 		// 	.attr('class','buttonDiv')
 		// 	.style('top',bbox.top)
@@ -1091,7 +1095,7 @@ class LightCurveViewer extends Component{
 
 
 		//outline for the feature plots 
-		var featureBox = d3.select(this.svgContainer.current).append("div")
+		var featureBox = d3.select(this.container).append("div")
 			.attr('id','featureBox')
 			.attr('class','buttonDiv')
 			.style('top',bbox.top)
@@ -1100,7 +1104,7 @@ class LightCurveViewer extends Component{
 			.style('background-color',getComputedStyle(document.documentElement).getPropertyValue('--button-background-color'))
 
 		//button to switch features
-		var featureButton = d3.select(this.svgContainer.current).append("div")
+		var featureButton = d3.select(this.container).append("div")
 			.attr('id','featureButton')
 			.attr('class','buttonDiv buttonDivUse')
 			.style('top',bbox.top)
@@ -1143,30 +1147,30 @@ class LightCurveViewer extends Component{
 				.text("arrow_forward")
 
 		//descriptions under each button
-		d3.select(this.svgContainer.current).append("div")
+		d3.select(this.container).append("div")
 			.attr("class","buttonInstructions")
 			.style("left",bbox.left)
 			.style("top",parseFloat(bbox.top) + 50 + "px")
 			.text("help");
-		d3.select(this.svgContainer.current).append("div")
+		d3.select(this.container).append("div")
 			.attr("class","buttonInstructions")
 			.style("left",parseFloat(bbox.left) + 50 + "px")
 			.style("top",parseFloat(bbox.top) + 50 + "px")
 			.text("flip");
-		d3.select(this.svgContainer.current).append("div")
+		d3.select(this.container).append("div")
 			.attr("class","buttonInstructions")
 			.style("left",parseFloat(bbox.left) + 100 + "px")
 			.style("top",parseFloat(bbox.top) + 50 + "px")
 			.style("width","200px")
 			.text("change the period");
-		d3.select(this.svgContainer.current).append("div")
+		d3.select(this.container).append("div")
 			.attr("class","buttonInstructions")
 			.style("left",parseFloat(bbox.left) + 300 + "px")
 			.style("top",parseFloat(bbox.top) + 50 + "px")
 			.style("width","40px")
 			.text("on/off");	
 		
-		d3.select(this.svgContainer.current).append("div")
+		d3.select(this.container).append("div")
 			.attr("class","buttonInstructions")
 			.style('left',parseFloat(featureBox.style('left'))+parseFloat(featureBox.style('width')) + "px")
 			.style("top",parseFloat(bbox.top) + 50 + "px")
@@ -1178,22 +1182,24 @@ class LightCurveViewer extends Component{
 	//////////////
 	startPlotting(){
 
+		this.container = this.svgContainer.current; //not sure why I need to rest this here.
+
 		//cleanup, in case this replots
-		d3.select(this.svgContainer.current).selectAll("div").remove();
-		d3.select(this.svgContainer.current).selectAll("svg").remove();
-		d3.select(this.svgContainer.current).selectAll("form").remove();
+		d3.select(this.container).selectAll("div").remove();
+		d3.select(this.container).selectAll("svg").remove();
+		d3.select(this.container).selectAll("form").remove();
 		this.fpos = 0;
 		this.featurePlots = [];
 
-		var bbox = d3.select(this.svgContainer.current).node().getBoundingClientRect();
+		var bbox = d3.select(this.container).node().getBoundingClientRect();
 		this.setPlotPositions(bbox);
 
 		console.log("props", this.props)
 		this.period = this.inputData[this.inputData.filters[this.ppos]].period;
 
 		//set the background
-		d3.select(this.svgContainer.current).style('background-color',this.backgroundColor)
-		d3.select(this.svgContainer.current).style('border','1px solid '+this.borderColor)
+		d3.select(this.container).style('background-color',this.backgroundColor)
+		d3.select(this.container).style('border','1px solid '+this.borderColor)
 
 		//add the phase data
 		this.inputData.phaseData = [];
@@ -1313,7 +1319,7 @@ class LightCurveViewer extends Component{
 									[-0.7644119, 4.715261459350586], 
 									[16.3, -3.263948750885376],
 									true, d3.scaleLinear(), d3.scaleLinear(), 5, 5);								 
-		this.addImageToPlot(this.CMDPlot, CMDimage)
+		this.addImageToPlot(this.CMDPlot, this.CMDImage)
 		this.createScatterPlot(this.CMDPlot, this.inputData.CMDdata, "ellipse");
 		//reposition bottom label
 		var y = parseFloat(this.rawPlot.plot.select(".x-title").attr("y")) + this.plotPositions.heightPhase + this.plotPositions.marginPhase.top + + this.plotPositions.marginDays.top;
@@ -1396,6 +1402,7 @@ class LightCurveViewer extends Component{
 					refreshMode='debounce'
 					refreshRate={500}
 				/>
+
 			</div>
 		)
 	}
@@ -1403,6 +1410,7 @@ class LightCurveViewer extends Component{
 }
 
 //
+//<img src={CMDimage} width="200" height="200" />
 
 LightCurveViewer.wrappedComponent.propTypes = {
   inputData: PropTypes.arrayOf(PropTypes.arrayOf(PropTypes.number))

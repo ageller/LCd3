@@ -10,6 +10,9 @@ to enable google fonts
 
 to enable svg image (svg-inline-loader and react-inlinesvg and dependencies):
 https://www.npmjs.com/package/svg-inline-loader
+`npm install loader-utils --save`
+`npm install object-assign --save`
+`npm install simple-html-tokenizer --save`
 `npm install svg-inline-loader --save`
 
 from https://www.npmjs.com/package/react-inlinesvg
@@ -17,6 +20,8 @@ from https://www.npmjs.com/package/react-inlinesvg
 `npm install once --save`
 `npm install react --save`
 `npm install react-inlinesvg --save` 
+
+try this https://blog.hellojs.org/importing-images-in-react-c76f0dfcb552
 
 
 into front-end-monorepo/packages/lib-classifier/webpack.dev.js
