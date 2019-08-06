@@ -84,7 +84,8 @@ class LightCurveViewer {
 	constructor () {
 		this.container = "#container";
 		this.inputData;
-		this.CMDImage = "./data/CMDbackground_BW.svg"
+		//this.CMDImage = "./data/CMDbackground_BW.svg"
+		this.CMDImage = "./data/CMDbackground_BW.png"
 
 		//colors for the plotting region
 		this.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--plot-background-color'); 
@@ -244,8 +245,8 @@ class LightCurveViewer {
 					return d3.symbol().type(d3['symbol'+d.s]).size(d.r)();
 				})
 				.attr("transform", function(d) { 
-      				return "translate(" + xScale(+d.x) + "," + yScale(+d.y) +")"; 
-    			})
+					return "translate(" + xScale(+d.x) + "," + yScale(+d.y) +")"; 
+				})
 				.style("fill", function(d) {return d.c;})
 				.attr('stroke','#555555')
 				.attr('stroke-width',1)
@@ -371,8 +372,8 @@ class LightCurveViewer {
 		if (plotObj.errorType == "line"){
 			plotObj.plot.selectAll(".symbol").transition(t)
 				.attr("transform", function(d) { 
-      				return "translate(" + plotObj.xScale(+d.x) + "," + plotObj.yScale(+d.y) +")scale("+rScale+")"; 
-    			})
+					return "translate(" + plotObj.xScale(+d.x) + "," + plotObj.yScale(+d.y) +")scale("+rScale+")"; 
+				})
 
 			// plotObj.plot.selectAll("circle").transition(t)
 			// 	.attr("cx", function(d) {return plotObj.xScale(+d.x); })
@@ -1325,8 +1326,8 @@ class LightCurveViewer {
 									this.plotPositions.leftCMD,
 									this.plotPositions.topCMD,
 									"18pt", "10pt",
-									[-0.7644119, 4.715261459350586], 
-									[16.3, -3.263948750885376],
+									[-0.7644119, 5.7152615], 
+									[18.828021451359326, -3.263948750885376],
 									true, d3.scaleLinear(), d3.scaleLinear(), 5, 5);								 
 		this.addImageToPlot(this.CMDPlot, this.CMDImage)
 		this.createScatterPlot(this.CMDPlot, this.inputData.CMDdata, "ellipse");
@@ -1445,3 +1446,29 @@ d3.json("data/27882110006813.json")
 		lightCurveViewer.inputData = data;
 		lightCurveViewer.startPlotting();
 	});
+
+
+
+//simple way to scroll through these data files with space bar
+iData = 0;
+files = ['data/27882110006813.json',
+		'data/XanderTest/37.json',
+		'data/XanderTest/182.json',
+		'data/XanderTest/180.json',
+		'data/XanderTest/2.json',
+		'data/XanderTest/210.json',
+		'data/XanderTest/791.json',
+		'data/XanderTest/154.json']
+document.body.onkeyup = function(e){
+	if(e.keyCode == 32){
+		iData += 1;
+		iData = iData % files.length;
+		console.log(iData, files[iData]);
+		d3.select('#container').html(""); //remove the previous plot
+		d3.json(files[iData])
+			.then(function(data) {
+				lightCurveViewer.inputData = data;
+				lightCurveViewer.startPlotting();
+			});
+	}
+}
