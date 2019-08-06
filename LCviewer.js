@@ -476,7 +476,8 @@ class LightCurveViewer {
 			xExtent = d3.extent(data, function(d) { return +d.x; })
 		}
 		if (yExtent == null){
-			yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
+			//yExtent = d3.extent(data, function(d) { return (+d.y + d.ye); });
+			yExtent = d3.extent(data, function(d) { return +d.y; });
 		}
 
 		xScale.domain(xExtent).nice();
