@@ -1315,6 +1315,11 @@ class LightCurveViewer {
 		this.createScatterPlot(this.rawPlot, this.inputData.rawData, "line");
 
 
+		///////////////////remove this if we can fix the image aspect ratio
+		//a scaling because Xander's figure is square and my div is not
+		var cmdOff = (this.plotPositions.heightCMD - this.plotPositions.widthCMD)/2.;
+		var dataOff = cmdOff/this.plotPositions.heightCMD*(18.828021451359326 + 3.263948750885376);
+		
 		this.CMDPlot = this.createAxes(this.inputData.CMDdata, 
 									this.plotPositions.widthCMD, 
 									this.plotPositions.heightCMD, 
@@ -1328,7 +1333,8 @@ class LightCurveViewer {
 									this.plotPositions.topCMD,
 									"18pt", "10pt",
 									[-0.7644119, 5.7152615], 
-									[18.828021451359326, -3.263948750885376],
+									//[18.828021451359326, -3.263948750885376],
+									[18.828021451359326 + dataOff, -3.263948750885376 - dataOff],
 									true, d3.scaleLinear(), d3.scaleLinear(), 5, 5);								 
 		this.addImageToPlot(this.CMDPlot, this.CMDImage)
 		this.createScatterPlot(this.CMDPlot, this.inputData.CMDdata, "ellipse");
