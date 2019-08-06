@@ -15,4 +15,6 @@ Thumbs.db
 __pycache__
 *.pyc
 
-
+# fits files
+#################3
+*.fit*
